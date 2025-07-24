@@ -23,15 +23,15 @@ AMyCharacter::AMyCharacter()
 	// 최대 이동속도
 	MoveComp->MaxWalkSpeed = 2000.0f;
 	// 가속도
-	MoveComp->MaxAcceleration = 8000.0f;
+	MoveComp->MaxAcceleration = 4000.0f;
 	// 마찰력
 	MoveComp->GroundFriction = 8.0f;
 	// 제동력
 	MoveComp->BrakingDecelerationWalking = 8000.0f;
 	// 공중 제어력
-	MoveComp->AirControl = 1.0f;
+	MoveComp->AirControl = 0.5f;
 	// 중력 스케일 증가
-	MoveComp->GravityScale = 1.0f;
+	MoveComp->GravityScale = 1.5f;
 	// 공중 마찰력
 	MoveComp->FallingLateralFriction = 3.0f;
 
@@ -147,6 +147,63 @@ void AMyCharacter::DashRecharge()
 	}
 }
 
+void AMyCharacter::PerformDodge(const FVector& Direction)
+{
+	// 점프와 충돌하지 않도록 Z축 속도는 보존
+	LaunchCharacter(Direction.GetSafeNormal() * DodgeDistance, true, false);
+}
+
+void AMyCharacter::DodgeForward()
+{
+	if (GetWorld()->GetTimeSeconds() - LastForwardTapTime <= DodgeTapTime)
+	{
+		PerformDodge(GetActorForwardVector());
+		LastForwardTapTime = 0.f; // 닷지 성공 후 초기화
+	}
+	else
+	{
+		LastForwardTapTime = GetWorld()->GetTimeSeconds();
+	}
+}
+
+void AMyCharacter::DodgeBackward()
+{
+	if (GetWorld()->GetTimeSeconds() - LastBackwardTapTime <= DodgeTapTime)
+	{
+		PerformDodge(-GetActorForwardVector()); // 뒤는 전방 벡터의 반대
+		LastBackwardTapTime = 0.f;
+	}
+	else
+	{
+		LastBackwardTapTime = GetWorld()->GetTimeSeconds();
+	}
+}
+
+void AMyCharacter::DodgeRight()
+{
+	if (GetWorld()->GetTimeSeconds() - LastRightTapTime <= DodgeTapTime)
+	{
+		PerformDodge(GetActorRightVector());
+		LastRightTapTime = 0.f;
+	}
+	else
+	{
+		LastRightTapTime = GetWorld()->GetTimeSeconds();
+	}
+}
+
+void AMyCharacter::DodgeLeft()
+{
+	if (GetWorld()->GetTimeSeconds() - LastLeftTapTime <= DodgeTapTime)
+	{
+		PerformDodge(-GetActorRightVector()); // 왼쪽은 오른쪽 벡터의 반대
+		LastLeftTapTime = 0.f;
+	}
+	else
+	{
+		LastLeftTapTime = GetWorld()->GetTimeSeconds();
+	}
+}
 // Called every frame
 void AMyCharacter::Tick(float DeltaTime)
 {
@@ -171,6 +228,10 @@ void AMyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AMyCharacter::Move);
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AMyCharacter::Look);
+		EnhancedInputComponent->BindAction(DodgeForwardAction, ETriggerEvent::Started, this, &AMyCharacter::DodgeForward);
+		EnhancedInputComponent->BindAction(DodgeBackwardAction, ETriggerEvent::Started, this, &AMyCharacter::DodgeBackward);
+		EnhancedInputComponent->BindAction(DodgeRightAction, ETriggerEvent::Started, this, &AMyCharacter::DodgeRight);
+		EnhancedInputComponent->BindAction(DodgeLeftAction, ETriggerEvent::Started, this, &AMyCharacter::DodgeLeft);
 	}
 	//Super::SetupPlayerInputComponent(PlayerInputComponent);
 

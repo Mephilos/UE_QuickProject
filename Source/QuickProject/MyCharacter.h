@@ -22,7 +22,7 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	
-	// ÀÎÇÚ½ºµå ÀÎÇ²
+	// ì¸í•¸ìŠ¤ë“œ ì¸í’‹
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
 	UInputMappingContext* DefaultMappingContext;
 
@@ -37,36 +37,62 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
 	UInputAction* DashAction;
+	// ë‹·ì§€
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
+	UInputAction* DodgeForwardAction;
 
-	// ´ë½¬ ¼³Á¤
-	UPROPERTY(EditAnywhere, Category = "Movement/Dash")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
+	UInputAction* DodgeBackwardAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
+	UInputAction* DodgeRightAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
+	UInputAction* DodgeLeftAction;
+
+	UPROPERTY(EditAnywhere, Category = "Movement-Dodge")
+	float DodgeDistance = 2500.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Movement-Dodge")
+	float DodgeTapTime = 0.25f;
+
+	float LastForwardTapTime = 0.f;
+	float LastBackwardTapTime = 0.f;
+	float LastRightTapTime = 0.f;
+	float LastLeftTapTime = 0.f;
+
+
+	// ëŒ€ì‰¬
+	UPROPERTY(EditAnywhere, Category = "Movement-Dash")
 	float DashDistance = 5000.0f;
-	// ´ë½¬ ¸®Â÷Áö Äğ´Ù¿î
-	UPROPERTY(EditAnywhere, Category = "Movement/Dash")
+
+	UPROPERTY(EditAnywhere, Category = "Movement-Dash")
 	float DashRechargeCooldown = 1.0f;
-	// ´ë½¬ Â÷Áö È½¼ö Á¦ÇÑ
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement/Dash")
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement-Dash")
 	int32 MaxDashCharges = 3;
-	// ÇöÀç ´ë½¬ ½ºÅÃ
-	UPROPERTY(BlueprintReadOnly, Category = "Movement/Dash")
+
+	UPROPERTY(BlueprintReadOnly, Category = "Movement-Dash")
 	int32 CurrentDashCharges;
 	
 	FTimerHandle DashRechargeCooldownHandle;
 
-	//// ´åÁö º¯¼ö
-	//float DodgeDistance = 2000.0f;
-	//float DodgeCooldown = 0.2f;
-	//float LastForwardPressTime = 0.f;
-	//float LastRightPressTime = 0.f;
 
 
 	virtual void BeginPlay() override;
 
-	// ÀÌµ¿ ÇÔ¼ö
+	// ëŒ€ì‰¬ í•¨ìˆ˜
 	void Dash();
 	void DashRecharge();
-	/*void MoveForward(float Value);
-	void MoveRight(float Value);*/
+	
+	// ë‹·ì§€ í•¨ìˆ˜
+	void DodgeForward();
+	void DodgeBackward();
+	void DodgeRight();
+	void DodgeLeft();
+	void PerformDodge(const FVector& Direction);
+	
+	// ì´ë™ í•¨ìˆ˜
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 
