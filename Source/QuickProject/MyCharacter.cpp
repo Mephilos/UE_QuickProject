@@ -6,6 +6,8 @@
 #include "EnhancedInputSubsystems.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/InputComponent.h"
+#include "Camera/CameraComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 
 // Sets default values
 AMyCharacter::AMyCharacter()
@@ -221,11 +223,29 @@ void AMyCharacter::StartSlide()
 {
 	if (GetCharacterMovement()->Velocity.Size() >= MinSlideSpeed && GetCharacterMovement()->IsMovingOnGround())
 	{
+		// 원래 마찰력 저장
 		DefaultFriction = GetCharacterMovement()->GroundFriction;
+		// 슬라이딩 마찰력 적용
 		GetCharacterMovement()->GroundFriction = SlideFriction;
-
+		
 		Crouch();
 
+		//FVector SlideDirection = GetLastMovementInputVector().IsNearlyZero() ? GetActorForwardVector() : GetLastMovementInputVector();
+
+		FVector SlideDirection = GetLastMovementInputVector();
+		// 케릭터의 입력이 없으면
+		if (SlideDirection.IsNearlyZero())
+		{
+			// 앞 방향으로
+			SlideDirection = GetActorForwardVector();
+		}
+		LaunchCharacter(SlideDirection * MinSlideSpeed, false, false);
+		// 가속감 추가 위해서 포브 변경
+		if (auto* Camera = FindComponentByClass<UCameraComponent>())
+		{
+			Camera->SetFieldOfView(105.f);
+		}
+		// 슬라이딩 타이머 설정
 		GetWorld()->GetTimerManager().SetTimer(SlideTimerHandle, this, &AMyCharacter::StopSlide, 0.75f, false);
 	}
 }
@@ -233,9 +253,15 @@ void AMyCharacter::StartSlide()
 void AMyCharacter::StopSlide()
 {
 	UnCrouch();
-
+	// 마찰력 복구
 	GetCharacterMovement()->GroundFriction = DefaultFriction;
-	
+
+	// 카메라 포브 값 복구
+	if (auto* Camera = FindComponentByClass<UCameraComponent>())
+	{
+		Camera->SetFieldOfView(90.f);
+	}
+	// 타이머 초기화
 	GetWorld()->GetTimerManager().ClearTimer(SlideTimerHandle);
 
 }
@@ -248,30 +274,37 @@ void AMyCharacter::Tick(float DeltaTime)
 }
 void AMyCharacter::Jump()
 {
+	// 케릭터 컴포넌트 가져오기
 	UCharacterMovementComponent* MoveComp = GetCharacterMovement();
-
+	// 케릭터 컴포넌트 통해서 공중 확인
 	if (MoveComp->IsFalling())
 	{
-		FVector Start = GetActorLocation();
-		FVector Right = GetActorRightVector();
+		// 라인 트레이스 (전방위)
+		FVector Start = GetActorLocation(); // 케릭터 위치
+		FVector Right = GetActorRightVector(); 
 		FVector Forward = GetActorForwardVector();
 		FHitResult HitResult;
 
+		// 오른쪽, 왼쪽 벽을 순서대로 체크
 		FVector Directions[] = { Right, -Right, Forward, -Forward };
 		for (const FVector& Direction : Directions)
 		{
+			// 캐릭터 위치에서 옆으로 100 유닛까지 라인을 그려서 벽과 충돌 확인
 			if (GetWorld()->LineTraceSingleByChannel(HitResult, Start, Start + Direction * 100.f, ECC_Visibility))
 			{
+				// 벽 점프 실행
 				FVector WallNormal = HitResult.Normal;
 				FVector LaunchVelocity = WallNormal * WallJumpHorizontalForce + FVector::UpVector * WallJumpUpwardForce;
 
 				LaunchCharacter(LaunchVelocity, true, true);
 
+				// 벽 점프후 더블 점프(스택이 있다는 하에) 점프 횟수 초기화
 				JumpCurrentCount = JumpMaxCount - 1;
 
+				
 				UE_LOG(LogTemp, Warning, TEXT("Wall with Normal: %s"), *WallNormal.ToString());
 				
-				// 벽점프했으면 바로 종료
+				// 벽점프했으면 점프 함수 바로 종료
 				return;
 			}
 		}
