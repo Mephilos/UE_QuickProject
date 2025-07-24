@@ -19,14 +19,24 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 	
+	// 이동 설정
 	void MoveForward(float Value);
 	void MoveRight(float Value);
 	
-	// 대쉬 추가
+	// 대쉬 설정
 	UPROPERTY(EditAnywhere, Category = "Movement");
 	float DashDistance = 5000.0f;
+	
+	UPROPERTY(EditAnywhere, Category = "Movement");
+	float DashCooldown = 1.0f;
+
+	bool bCanDash = true;
+
+	FTimerHandle DashCooldownTimerHandle;
+
 	void Dash();
 
+	void ResetDash();
 
 public:	
 	// Called every frame

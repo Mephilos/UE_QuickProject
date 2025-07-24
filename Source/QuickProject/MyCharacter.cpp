@@ -37,7 +37,26 @@ void AMyCharacter::MoveRight(float Value)
 
 void AMyCharacter::Dash()
 {
-	LaunchCharacter(GetActorForwardVector() * DashDistance, true, true);
+	if (bCanDash)
+	{
+		bCanDash = false;
+		// 케릭터의 입력 방향
+		FVector DashDirection = GetLastMovementInputVector();
+		// 케릭터의 입력이 없으면
+		if (DashDirection.IsNearlyZero())
+		{	
+			// 앞 방향으로
+			DashDirection = GetActorForwardVector();
+		}
+		// 대쉬
+		LaunchCharacter(DashDirection.GetSafeNormal() * DashDistance, true, true);
+		// 대쉬 쿨다운 뒤 ResetDash 함수를 실행하는 타이머 설정
+		GetWorld()->GetTimerManager().SetTimer(DashCooldownTimerHandle, this, &AMyCharacter::ResetDash, DashCooldown, false);
+	}	
+}
+void AMyCharacter::ResetDash()
+{
+	bCanDash = true;
 }
 
 // Called every frame
