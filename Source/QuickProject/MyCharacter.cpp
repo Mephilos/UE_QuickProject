@@ -37,9 +37,9 @@ AMyCharacter::AMyCharacter()
 	// 최대 이동속도
 	MoveComp->MaxWalkSpeed = 2000.0f;
 	// 가속도
-	MoveComp->MaxAcceleration = 4000.0f;
+	MoveComp->MaxAcceleration = 2000.0f;
 	// 마찰력
-	MoveComp->GroundFriction = 8.0f;
+	MoveComp->GroundFriction = 10.0f;
 	// 제동력
 	MoveComp->BrakingDecelerationWalking = 8000.0f;
 	// 공중 제어력
@@ -63,6 +63,20 @@ void AMyCharacter::BeginPlay()
 		{
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
+	}
+	//커브 에셋 바인딩, 업데이트 함수 연결
+	if (SlideSpeedCurve)
+	{
+		FOnTimelineFloat ProgressFunction;
+		ProgressFunction.BindUFunction(this, FName("UpdateSlide"));
+		SlideTimeline.AddInterpFloat(SlideSpeedCurve, ProgressFunction);
+	}
+
+	if (SlideFOVCurve)
+	{
+		FOnTimelineFloat FOVFunction;
+		FOVFunction.BindUFunction(this, FName("UpdateSlideFOV"));
+		SlideTimeline.AddInterpFloat(SlideFOVCurve, FOVFunction);
 	}
 }
 
@@ -140,8 +154,14 @@ void AMyCharacter::Dash()
 			// 앞 방향으로
 			DashDirection = GetActorForwardVector();
 		}
+
+		// Z축을 강제로 0으로 설정해서 수직이동 제한
+		DashDirection.Z = 0.0f;
+
+		// 다시 정규화해서 대쉬 속도에 영향이 없게
+		DashDirection = DashDirection.GetSafeNormal();
 		// 대쉬
-		LaunchCharacter(DashDirection.GetSafeNormal() * DashDistance, true, false);
+		LaunchCharacter(DashDirection * DashDistance, true, false);
 		// 스택 타이머가 실행 중이 아닐 때만 실행
 		if (!GetWorld()->GetTimerManager().IsTimerActive(DashRechargeCooldownHandle))
 		{
@@ -163,8 +183,16 @@ void AMyCharacter::DashRecharge()
 
 void AMyCharacter::PerformDodge(const FVector& Direction)
 {
+	// 방향 벡터 복사
+	FVector DodgeDirection = Direction;
+	// 닷지 방향 고정위해 Z축 강제로 0 수직이동 방지
+	DodgeDirection.Z = 0.0f;
+
+	// 벡터 정규화(Z축 빠짐)다시 속도 보존
+	DodgeDirection = DodgeDirection.GetSafeNormal();
+	
 	// 점프와 충돌하지 않도록 Z축 속도는 보존
-	LaunchCharacter(Direction.GetSafeNormal() * DodgeDistance, true, false);
+	LaunchCharacter(DodgeDirection * DodgeDistance, true, false);
 }
 
 void AMyCharacter::DodgeForward()
@@ -221,55 +249,79 @@ void AMyCharacter::DodgeLeft()
 
 void AMyCharacter::StartSlide()
 {
-	if (GetCharacterMovement()->Velocity.Size() >= MinSlideSpeed && GetCharacterMovement()->IsMovingOnGround())
+	if (GetCharacterMovement()->IsMovingOnGround())
 	{
-		// 원래 마찰력 저장
-		DefaultFriction = GetCharacterMovement()->GroundFriction;
-		// 슬라이딩 마찰력 적용
-		GetCharacterMovement()->GroundFriction = SlideFriction;
-		
 		Crouch();
-
-		//FVector SlideDirection = GetLastMovementInputVector().IsNearlyZero() ? GetActorForwardVector() : GetLastMovementInputVector();
-
-		FVector SlideDirection = GetLastMovementInputVector();
-		// 케릭터의 입력이 없으면
-		if (SlideDirection.IsNearlyZero())
-		{
-			// 앞 방향으로
-			SlideDirection = GetActorForwardVector();
-		}
-		LaunchCharacter(SlideDirection * MinSlideSpeed, false, false);
-		// 가속감 추가 위해서 포브 변경
-		if (auto* Camera = FindComponentByClass<UCameraComponent>())
-		{
-			Camera->SetFieldOfView(105.f);
-		}
-		// 슬라이딩 타이머 설정
-		GetWorld()->GetTimerManager().SetTimer(SlideTimerHandle, this, &AMyCharacter::StopSlide, 0.75f, false);
+		SlideTimeline.PlayFromStart();
 	}
+	//if (GetCharacterMovement()->Velocity.Size() >= MinSlideSpeed && GetCharacterMovement()->IsMovingOnGround())
+	//{
+	//	// 원래 마찰력 저장
+	//	DefaultFriction = GetCharacterMovement()->GroundFriction;
+	//	// 슬라이딩 마찰력 적용
+	//	GetCharacterMovement()->GroundFriction = SlideFriction;
+	//	
+	//	Crouch();
+
+	//	//FVector SlideDirection = GetLastMovementInputVector().IsNearlyZero() ? GetActorForwardVector() : GetLastMovementInputVector();
+
+	//	FVector SlideDirection = GetLastMovementInputVector();
+	//	// 케릭터의 입력이 없으면
+	//	if (SlideDirection.IsNearlyZero())
+	//	{
+	//		// 앞 방향으로
+	//		SlideDirection = GetActorForwardVector();
+	//	}
+	//	LaunchCharacter(SlideDirection * MinSlideSpeed, false, false);
+	//	// 가속감 추가 위해서 포브 변경
+	//	if (auto* Camera = FindComponentByClass<UCameraComponent>())
+	//	{
+	//		Camera->SetFieldOfView(105.f);
+	//	}
+	//	// 슬라이딩 타이머 설정
+	//	GetWorld()->GetTimerManager().SetTimer(SlideTimerHandle, this, &AMyCharacter::StopSlide, 0.75f, false);
+	//}
 }
 
 void AMyCharacter::StopSlide()
 {
 	UnCrouch();
-	// 마찰력 복구
-	GetCharacterMovement()->GroundFriction = DefaultFriction;
+	SlideTimeline.Stop();
 
-	// 카메라 포브 값 복구
 	if (auto* Camera = FindComponentByClass<UCameraComponent>())
 	{
-		Camera->SetFieldOfView(90.f);
+		Camera->SetFieldOfView(90.0f);
 	}
-	// 타이머 초기화
-	GetWorld()->GetTimerManager().ClearTimer(SlideTimerHandle);
+	//// 마찰력 복구
+	//GetCharacterMovement()->GroundFriction = DefaultFriction;
 
+	//// 카메라 포브 값 복구
+	//if (auto* Camera = FindComponentByClass<UCameraComponent>())
+	//{
+	//	Camera->SetFieldOfView(90.f);
+	//}
+	//// 타이머 초기화
+	//GetWorld()->GetTimerManager().ClearTimer(SlideTimerHandle);
 }
 
+void AMyCharacter::UpdateSlide(float Value)
+{
+	FVector Direction = GetLastMovementInputVector().IsNearlyZero() ? GetActorForwardVector() : GetLastMovementInputVector();
+	GetCharacterMovement()->Velocity = Direction * Value;
+}
+
+void AMyCharacter::UpdateSlideFOV(float Value)
+{
+	if (auto* Camera = FindComponentByClass<UCameraComponent>())
+	{
+		Camera->SetFieldOfView(Value);
+	}
+}
 // Called every frame
 void AMyCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	SlideTimeline.TickTimeline(DeltaTime);
 
 }
 void AMyCharacter::Jump()
@@ -296,7 +348,7 @@ void AMyCharacter::Jump()
 				FVector WallNormal = HitResult.Normal;
 				FVector LaunchVelocity = WallNormal * WallJumpHorizontalForce + FVector::UpVector * WallJumpUpwardForce;
 
-				LaunchCharacter(LaunchVelocity, true, true);
+				LaunchCharacter(LaunchVelocity, true, false);
 
 				// 벽 점프후 더블 점프(스택이 있다는 하에) 점프 횟수 초기화
 				JumpCurrentCount = JumpMaxCount - 1;

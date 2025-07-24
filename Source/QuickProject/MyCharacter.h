@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Components/TimelineComponent.h"
 #include "MyCharacter.generated.h"
 
 class UInputMappingContext;
@@ -69,6 +70,16 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Movement-Slide")
 	float SlideFriction = 0.1f;
+	UPROPERTY(EditAnywhere, Category = "Movement-Slide")
+	UCurveFloat* SlideSpeedCurve;
+	// 슬라이딩시 FOV값 변경
+	UPROPERTY(EditAnywhere, Category = "Movement-Slide")
+	UCurveFloat* SlideFOVCurve;
+
+	FTimeline SlideTimeline;
+	FTimerHandle SlideTimerHandle;
+
+	float DefaultFriction; // 기존 마찰력 보존 하기 위한 변수
 
 	// 벽점프
 	UPROPERTY(EditAnywhere, Category = "Movement-WallJump")
@@ -91,10 +102,6 @@ protected:
 
 	FTimerHandle DashRechargeCooldownHandle;
 
-	FTimerHandle SlideTimerHandle;
-
-	float DefaultFriction; // 기존 마찰력 보존 하기 위한 변수
-
 
 	virtual void BeginPlay() override;
 
@@ -112,6 +119,10 @@ protected:
 	// 슬라이딩 함수
 	void StartSlide();
 	void StopSlide();
+	UFUNCTION()
+	void UpdateSlide(float Value);
+	UFUNCTION()
+	void UpdateSlideFOV(float Value);
 
 	// 이동 함수
 	void Move(const FInputActionValue& Value);
