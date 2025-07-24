@@ -32,11 +32,11 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
 	UInputAction* JumpAction;
-	
+
 	// 대쉬
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
 	UInputAction* DashAction;
-	
+
 	// 닷지
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
 	UInputAction* DodgeForwardAction;
@@ -68,7 +68,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Movement-Slide")
 	float MinSlideSpeed = 1500.0f; // 슬라이딩 발동 가능 속도
-	
+
 	UPROPERTY(EditAnywhere, Category = "Movement-Slide")
 	float SlideFriction = 0.1f;
 
@@ -86,7 +86,7 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Category = "Movement-Dash")
 	int32 CurrentDashCharges; // 대쉬 스택
-	
+
 	FTimerHandle DashRechargeCooldownHandle;
 
 	FTimerHandle SlideTimerHandle;
@@ -99,14 +99,14 @@ protected:
 	// 대쉬 함수
 	void Dash();
 	void DashRecharge();
-	
+
 	// 닷지 함수
 	void DodgeForward();
 	void DodgeBackward();
 	void DodgeRight();
 	void DodgeLeft();
 	void PerformDodge(const FVector& Direction);
-	
+
 	// 슬라이딩 함수
 	void StartSlide();
 	void StopSlide();
@@ -118,7 +118,7 @@ protected:
 	//void Dodge(FVector DodgeDirection);
 	//void DodgeChecker(float& LastPressTime, FVector DodgeDirection);
 
-public:	
+public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
