@@ -2,7 +2,6 @@
 
 
 #include "MyCharacter.h"
-//#include "GameFramework/PlayerInput.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -11,6 +10,19 @@
 // Sets default values
 AMyCharacter::AMyCharacter()
 {
+	// 맴버 변수 초기화
+	DefaultMappingContext = nullptr;
+	MoveAction = nullptr;
+	LookAction = nullptr;
+	JumpAction = nullptr;
+	DashAction = nullptr;
+	CrouchAction = nullptr;
+	DodgeForwardAction = nullptr;
+	DodgeBackwardAction = nullptr;
+	DodgeRightAction = nullptr;
+	DodgeLeftAction = nullptr;
+	DefaultFriction = 0.0f;
+
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	
@@ -34,8 +46,8 @@ AMyCharacter::AMyCharacter()
 	MoveComp->GravityScale = 1.5f;
 	// 공중 마찰력
 	MoveComp->FallingLateralFriction = 3.0f;
-
-	
+	// 웅크리기 가능하게 설정
+	MoveComp->NavAgentProps.bCanCrouch = true;
 }
 
 // Called when the game starts or when spawned
@@ -204,6 +216,30 @@ void AMyCharacter::DodgeLeft()
 		LastLeftTapTime = GetWorld()->GetTimeSeconds();
 	}
 }
+
+void AMyCharacter::StartSlide()
+{
+	if (GetCharacterMovement()->Velocity.Size() >= MinSlideSpeed && GetCharacterMovement()->IsMovingOnGround())
+	{
+		DefaultFriction = GetCharacterMovement()->GroundFriction;
+		GetCharacterMovement()->GroundFriction = SlideFriction;
+
+		Crouch();
+
+		GetWorld()->GetTimerManager().SetTimer(SlideTimerHandle, this, &AMyCharacter::StopSlide, 0.75f, false);
+	}
+}
+
+void AMyCharacter::StopSlide()
+{
+	UnCrouch();
+
+	GetCharacterMovement()->GroundFriction = DefaultFriction;
+	
+	GetWorld()->GetTimerManager().ClearTimer(SlideTimerHandle);
+
+}
+
 // Called every frame
 void AMyCharacter::Tick(float DeltaTime)
 {
@@ -222,16 +258,22 @@ void AMyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 {
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
+		//점프, 대쉬
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &AMyCharacter::Jump);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &AMyCharacter::StopJumping);
 		EnhancedInputComponent->BindAction(DashAction, ETriggerEvent::Started, this, &AMyCharacter::Dash);
-
+		//이동, 시점
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AMyCharacter::Move);
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AMyCharacter::Look);
+		// 닷지
 		EnhancedInputComponent->BindAction(DodgeForwardAction, ETriggerEvent::Started, this, &AMyCharacter::DodgeForward);
 		EnhancedInputComponent->BindAction(DodgeBackwardAction, ETriggerEvent::Started, this, &AMyCharacter::DodgeBackward);
 		EnhancedInputComponent->BindAction(DodgeRightAction, ETriggerEvent::Started, this, &AMyCharacter::DodgeRight);
 		EnhancedInputComponent->BindAction(DodgeLeftAction, ETriggerEvent::Started, this, &AMyCharacter::DodgeLeft);
+		// 앉기(슬라이딩)
+		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started, this, &AMyCharacter::StartSlide);
+		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Completed, this, &AMyCharacter::StopSlide);
+
 	}
 	//Super::SetupPlayerInputComponent(PlayerInputComponent);
 

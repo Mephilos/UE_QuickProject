@@ -20,9 +20,7 @@ public:
 	AMyCharacter();
 
 protected:
-	// Called when the game starts or when spawned
-	
-	// 인핸스드 인풋
+	// 인핸스드 인풋 기본 이동
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
 	UInputMappingContext* DefaultMappingContext;
 
@@ -34,9 +32,11 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
 	UInputAction* JumpAction;
-
+	
+	// 대쉬
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
 	UInputAction* DashAction;
+	
 	// 닷지
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
 	UInputAction* DodgeForwardAction;
@@ -49,6 +49,11 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
 	UInputAction* DodgeLeftAction;
+	// 앉기(슬라이딩)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
+	UInputAction* CrouchAction;
+
+
 
 	UPROPERTY(EditAnywhere, Category = "Movement-Dodge")
 	float DodgeDistance = 2500.0f;
@@ -60,6 +65,13 @@ protected:
 	float LastBackwardTapTime = 0.f;
 	float LastRightTapTime = 0.f;
 	float LastLeftTapTime = 0.f;
+
+	UPROPERTY(EditAnywhere, Category = "Movement-Slide")
+	float MinSlideSpeed = 1500.0f; // 슬라이딩 발동 가능 속도
+	
+	UPROPERTY(EditAnywhere, Category = "Movement-Slide")
+	float SlideFriction = 0.1f;
+
 
 
 	// 대쉬
@@ -73,10 +85,13 @@ protected:
 	int32 MaxDashCharges = 3;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Movement-Dash")
-	int32 CurrentDashCharges;
+	int32 CurrentDashCharges; // 대쉬 스택
 	
 	FTimerHandle DashRechargeCooldownHandle;
 
+	FTimerHandle SlideTimerHandle;
+
+	float DefaultFriction; // 기존 마찰력 보존 하기 위한 변수
 
 
 	virtual void BeginPlay() override;
@@ -92,6 +107,10 @@ protected:
 	void DodgeLeft();
 	void PerformDodge(const FVector& Direction);
 	
+	// 슬라이딩 함수
+	void StartSlide();
+	void StopSlide();
+
 	// 이동 함수
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
