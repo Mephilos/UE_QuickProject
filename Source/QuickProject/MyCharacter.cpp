@@ -10,7 +10,8 @@ AMyCharacter::AMyCharacter()
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-
+	
+	CurrentDashCharges = MaxDashCharges; // 게임 시작시 대쉬 스택 만땅
 }
 
 // Called when the game starts or when spawned
@@ -37,26 +38,37 @@ void AMyCharacter::MoveRight(float Value)
 
 void AMyCharacter::Dash()
 {
-	if (bCanDash)
+	if (CurrentDashCharges > 0) // 대쉬 스택이 남아 있을 때 실행
 	{
-		bCanDash = false;
+		CurrentDashCharges--; // 대쉬 스택 소모
+
 		// 케릭터의 입력 방향
 		FVector DashDirection = GetLastMovementInputVector();
 		// 케릭터의 입력이 없으면
 		if (DashDirection.IsNearlyZero())
-		{	
+		{
 			// 앞 방향으로
 			DashDirection = GetActorForwardVector();
 		}
 		// 대쉬
 		LaunchCharacter(DashDirection.GetSafeNormal() * DashDistance, true, true);
-		// 대쉬 쿨다운 뒤 ResetDash 함수를 실행하는 타이머 설정
-		GetWorld()->GetTimerManager().SetTimer(DashCooldownTimerHandle, this, &AMyCharacter::ResetDash, DashCooldown, false);
-	}	
+		// 스택 타이머가 실행 중이 아닐 때만 실행
+		if (!GetWorld()->GetTimerManager().IsTimerActive(DashRechargeCooldownHandle))
+		{
+			// DashRechargeCooldown 마다 반복 실행되도록
+			GetWorld()->GetTimerManager().SetTimer(DashRechargeCooldownHandle, this, &AMyCharacter::DashRecharge, DashRechargeCooldown, true);
+		}
+	}
 }
-void AMyCharacter::ResetDash()
+void AMyCharacter::DashRecharge()
 {
-	bCanDash = true;
+	CurrentDashCharges++; // 대쉬 스택 ++
+
+	if (CurrentDashCharges >= MaxDashCharges) // 대쉬 스택이 최대치에 도달 했을 때 실행
+	{
+		CurrentDashCharges = MaxDashCharges; // 대쉬 스택 제한 확인
+		GetWorld()->GetTimerManager().ClearTimer(DashRechargeCooldownHandle); // 대쉬 스택 타임 초기화
+	}
 }
 
 // Called every frame

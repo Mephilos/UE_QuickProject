@@ -26,17 +26,23 @@ protected:
 	// 대쉬 설정
 	UPROPERTY(EditAnywhere, Category = "Movement");
 	float DashDistance = 5000.0f;
-	
+	// 대쉬 리차지 쿨다운
 	UPROPERTY(EditAnywhere, Category = "Movement");
-	float DashCooldown = 1.0f;
+	float DashRechargeCooldown = 1.0f;
+	// 대쉬 차지 횟수 제한
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement");
+	int32 MaxDashCharges = 3;
+	// 현재 대쉬 스택
+	UPROPERTY(BlueprintReadOnly, Category = "Movement");
+	int32 CurrentDashCharges;
 
-	bool bCanDash = true;
+	// bool bCanDash = true;
 
-	FTimerHandle DashCooldownTimerHandle;
+	FTimerHandle DashRechargeCooldownHandle;
 
 	void Dash();
 
-	void ResetDash();
+	void DashRecharge();
 
 public:	
 	// Called every frame
