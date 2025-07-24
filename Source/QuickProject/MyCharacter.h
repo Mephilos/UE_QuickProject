@@ -6,6 +6,10 @@
 #include "GameFramework/Character.h"
 #include "MyCharacter.generated.h"
 
+class UInputMappingContext;
+class UInputAction;
+struct FInputActionValue;
+
 UCLASS()
 class QUICKPROJECT_API AMyCharacter : public ACharacter
 {
@@ -17,20 +21,34 @@ public:
 
 protected:
 	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
 	
-	
+	// 인핸스드 인풋
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
+	UInputMappingContext* DefaultMappingContext;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
+	UInputAction* MoveAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
+	UInputAction* LookAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
+	UInputAction* JumpAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
+	UInputAction* DashAction;
+
 	// 대쉬 설정
-	UPROPERTY(EditAnywhere, Category = "Movement")
+	UPROPERTY(EditAnywhere, Category = "Movement/Dash")
 	float DashDistance = 5000.0f;
 	// 대쉬 리차지 쿨다운
-	UPROPERTY(EditAnywhere, Category = "Movement")
+	UPROPERTY(EditAnywhere, Category = "Movement/Dash")
 	float DashRechargeCooldown = 1.0f;
 	// 대쉬 차지 횟수 제한
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement/Dash")
 	int32 MaxDashCharges = 3;
 	// 현재 대쉬 스택
-	UPROPERTY(BlueprintReadOnly, Category = "Movement")
+	UPROPERTY(BlueprintReadOnly, Category = "Movement/Dash")
 	int32 CurrentDashCharges;
 	
 	FTimerHandle DashRechargeCooldownHandle;
@@ -42,11 +60,16 @@ protected:
 	//float LastRightPressTime = 0.f;
 
 
+	virtual void BeginPlay() override;
+
 	// 이동 함수
 	void Dash();
 	void DashRecharge();
-	void MoveForward(float Value);
-	void MoveRight(float Value);
+	/*void MoveForward(float Value);
+	void MoveRight(float Value);*/
+	void Move(const FInputActionValue& Value);
+	void Look(const FInputActionValue& Value);
+
 	//void Dodge(FVector DodgeDirection);
 	//void DodgeChecker(float& LastPressTime, FVector DodgeDirection);
 

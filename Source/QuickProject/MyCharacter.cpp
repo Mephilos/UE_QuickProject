@@ -2,8 +2,11 @@
 
 
 #include "MyCharacter.h"
-#include "GameFramework/PlayerInput.h"
+//#include "GameFramework/PlayerInput.h"
+#include "EnhancedInputComponent.h"
+#include "EnhancedInputSubsystems.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Components/InputComponent.h"
 
 // Sets default values
 AMyCharacter::AMyCharacter()
@@ -15,22 +18,22 @@ AMyCharacter::AMyCharacter()
 
 	JumpMaxCount = 2;
 	// 케릭터 컴포넌트 가져오기
-	//UCharacterMovementComponent* MoveComp = GetCharacterMovement();
+	UCharacterMovementComponent* MoveComp = GetCharacterMovement();
 
-	//// 최대 이동속도
-	//MoveComp->MaxWalkSpeed = 1000.0f;
-	//// 가속도
-	//MoveComp->MaxAcceleration = 8000.0f;
-	//// 마찰력
-	//MoveComp->GroundFriction = 8.0f;
-	//// 제동력
-	//MoveComp->BrakingDecelerationWalking = 8000.0f;
-	//// 공중 제어력
-	//MoveComp->AirControl = 1.0f;
-	//// 중력 스케일 증가
-	//MoveComp->GravityScale = 1.0f;
-	//// 공중 마찰력
-	//MoveComp->FallingLateralFriction = 3.0f;
+	// 최대 이동속도
+	MoveComp->MaxWalkSpeed = 2000.0f;
+	// 가속도
+	MoveComp->MaxAcceleration = 8000.0f;
+	// 마찰력
+	MoveComp->GroundFriction = 8.0f;
+	// 제동력
+	MoveComp->BrakingDecelerationWalking = 8000.0f;
+	// 공중 제어력
+	MoveComp->AirControl = 1.0f;
+	// 중력 스케일 증가
+	MoveComp->GravityScale = 1.0f;
+	// 공중 마찰력
+	MoveComp->FallingLateralFriction = 3.0f;
 
 	
 }
@@ -39,30 +42,58 @@ AMyCharacter::AMyCharacter()
 void AMyCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-}
-
-void AMyCharacter::MoveForward(float Value)
-{
-	if (Value != 0.0f)
+	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
 	{
-		// 키 입력시
-		//FVector Direction = GetActorForwardVector() * FMath::Sign(Value);
-		//DodgeChecker(LastForwardPressTime, Direction); // 닷지 체커
-		AddMovementInput(GetActorForwardVector(), Value);
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem =
+			ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+		{
+			Subsystem->AddMappingContext(DefaultMappingContext, 0);
+		}
 	}
 }
 
-void AMyCharacter::MoveRight(float Value)
+void AMyCharacter::Move(const FInputActionValue& Value)
 {
-	if (Value != 0.0f)
+	FVector2D MovementVector = Value.Get<FVector2D>();
+	if (Controller != nullptr)
 	{
-		// 키 입력시
-		//FVector Direction = GetActorRightVector() * FMath::Sign(Value);
-		//DodgeChecker(LastRightPressTime, Direction); // 닷치 체커
-		AddMovementInput(GetActorRightVector(), Value);
+		AddMovementInput(GetActorForwardVector(), MovementVector.Y);
+		AddMovementInput(GetActorRightVector(), MovementVector.X);
 	}
 }
 
+void AMyCharacter::Look(const FInputActionValue& Value)
+{
+	FVector2D LookAxisVector = Value.Get<FVector2D>();
+	if (Controller != nullptr)
+	{
+		AddControllerYawInput(LookAxisVector.X);
+		AddControllerPitchInput(LookAxisVector.Y);
+	}
+}
+
+//void AMyCharacter::MoveForward(float Value)
+//{
+//	if (Value != 0.0f)
+//	{
+//		// 키 입력시
+//		FVector Direction = GetActorForwardVector() * FMath::Sign(Value);
+//		DodgeChecker(LastForwardPressTime, Direction); // 닷지 체커
+//		AddMovementInput(GetActorForwardVector(), Value);
+//	}
+//}
+//
+//void AMyCharacter::MoveRight(float Value)
+//{
+//	if (Value != 0.0f)
+//	{
+//		// 키 입력시
+//		FVector Direction = GetActorRightVector() * FMath::Sign(Value);
+//		DodgeChecker(LastRightPressTime, Direction); // 닷치 체커
+//		AddMovementInput(GetActorRightVector(), Value);
+//	}
+//}
+//
 //void AMyCharacter::DodgeChecker(float& LastPressTime, FVector DodgeDirection)
 //{
 //	if (GetWorld()->GetTimeSeconds() - LastPressTime <= DodgeCooldown)
@@ -75,7 +106,7 @@ void AMyCharacter::MoveRight(float Value)
 //		LastPressTime = GetWorld()->GetTimeSeconds();
 //	}
 //}
-
+//
 //void AMyCharacter::Dodge(FVector DodgeDirection)
 //{
 //	LaunchCharacter(DodgeDirection.GetSafeNormal() * DodgeDistance, true, false);
@@ -132,16 +163,25 @@ void AMyCharacter::Jump()
 // Called to bind functionality to input
 void AMyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
+	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
+	{
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
+		EnhancedInputComponent->BindAction(DashAction, ETriggerEvent::Started, this, &AMyCharacter::Dash);
 
-	PlayerInputComponent->BindAxis("MoveForward", this, &AMyCharacter::MoveForward);
-	PlayerInputComponent->BindAxis("MoveRight", this, &AMyCharacter::MoveRight);
-	PlayerInputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
-	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AMyCharacter::Move);
+		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AMyCharacter::Look);
+	}
+	//Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-	PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &AMyCharacter::Dash);
-	
-	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AMyCharacter::Jump);
-	PlayerInputComponent->BindAction("Jump", IE_Released, this, &AMyCharacter::StopJumping);
+	//PlayerInputComponent->BindAxis("MoveForward", this, &AMyCharacter::MoveForward);
+	//PlayerInputComponent->BindAxis("MoveRight", this, &AMyCharacter::MoveRight);
+	//PlayerInputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
+	//PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
+
+	//PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &AMyCharacter::Dash);
+	//
+	//PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AMyCharacter::Jump);
+	//PlayerInputComponent->BindAction("Jump", IE_Released, this, &AMyCharacter::StopJumping);
 }
 
