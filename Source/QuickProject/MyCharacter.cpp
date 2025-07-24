@@ -12,6 +12,8 @@ AMyCharacter::AMyCharacter()
 	PrimaryActorTick.bCanEverTick = true;
 	
 	CurrentDashCharges = MaxDashCharges; // 게임 시작시 대쉬 스택 만땅
+
+	JumpMaxCount = 2;
 }
 
 // Called when the game starts or when spawned
@@ -89,5 +91,8 @@ void AMyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
 
 	PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &AMyCharacter::Dash);
+	
+	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AMyCharacter::Jump);
+	PlayerInputComponent->BindAction("Jump", IE_Released, this, &AMyCharacter::StopJumping);
 }
 

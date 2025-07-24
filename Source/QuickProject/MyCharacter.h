@@ -19,30 +19,29 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 	
-	// 이동 설정
-	void MoveForward(float Value);
-	void MoveRight(float Value);
 	
 	// 대쉬 설정
-	UPROPERTY(EditAnywhere, Category = "Movement");
+	UPROPERTY(EditAnywhere, Category = "Movement")
 	float DashDistance = 5000.0f;
 	// 대쉬 리차지 쿨다운
-	UPROPERTY(EditAnywhere, Category = "Movement");
+	UPROPERTY(EditAnywhere, Category = "Movement")
 	float DashRechargeCooldown = 1.0f;
 	// 대쉬 차지 횟수 제한
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement");
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
 	int32 MaxDashCharges = 3;
 	// 현재 대쉬 스택
-	UPROPERTY(BlueprintReadOnly, Category = "Movement");
+	UPROPERTY(BlueprintReadOnly, Category = "Movement")
 	int32 CurrentDashCharges;
 
 	// bool bCanDash = true;
 
 	FTimerHandle DashRechargeCooldownHandle;
 
+	// 이동 함수
 	void Dash();
-
 	void DashRecharge();
+	void MoveForward(float Value);
+	void MoveRight(float Value);
 
 public:	
 	// Called every frame
