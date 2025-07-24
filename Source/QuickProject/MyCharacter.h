@@ -18,9 +18,14 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	
 	void MoveForward(float Value);
 	void MoveRight(float Value);
-
+	
+	// 대쉬 추가
+	UPROPERTY(EditAnywhere, Category = "Movement");
+	float DashDistance = 5000.0f;
+	void Dash();
 
 
 public:	

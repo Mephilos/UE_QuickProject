@@ -3,6 +3,7 @@
 
 #include "MyCharacter.h"
 #include "GameFramework/PlayerInput.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 // Sets default values
 AMyCharacter::AMyCharacter()
@@ -17,6 +18,7 @@ void AMyCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 }
+
 void AMyCharacter::MoveForward(float Value)
 {
 	if (Value != 0.0f)
@@ -33,6 +35,11 @@ void AMyCharacter::MoveRight(float Value)
 	}
 }
 
+void AMyCharacter::Dash()
+{
+	LaunchCharacter(GetActorForwardVector() * DashDistance, true, true);
+}
+
 // Called every frame
 void AMyCharacter::Tick(float DeltaTime)
 {
@@ -44,10 +51,12 @@ void AMyCharacter::Tick(float DeltaTime)
 void AMyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
+
 	PlayerInputComponent->BindAxis("MoveForward", this, &AMyCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &AMyCharacter::MoveRight);
 	PlayerInputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
 
+	PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &AMyCharacter::Dash);
 }
 
