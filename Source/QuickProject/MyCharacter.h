@@ -49,12 +49,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
 	UInputAction* DodgeLeftAction;
-	// 앉기(슬라이딩)
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
-	UInputAction* CrouchAction;
-
-
-
+	
 	UPROPERTY(EditAnywhere, Category = "Movement-Dodge")
 	float DodgeDistance = 2500.0f;
 
@@ -65,14 +60,21 @@ protected:
 	float LastBackwardTapTime = 0.f;
 	float LastRightTapTime = 0.f;
 	float LastLeftTapTime = 0.f;
-
+	// 앉기(슬라이딩)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
+	UInputAction* CrouchAction;
+	
 	UPROPERTY(EditAnywhere, Category = "Movement-Slide")
 	float MinSlideSpeed = 1500.0f; // 슬라이딩 발동 가능 속도
 
 	UPROPERTY(EditAnywhere, Category = "Movement-Slide")
 	float SlideFriction = 0.1f;
 
-
+	// 벽점프
+	UPROPERTY(EditAnywhere, Category = "Movement-WallJump")
+	float WallJumpHorizontalForce = 1500.0f;
+	UPROPERTY(EditAnywhere, Category = "Movement-WallJump")
+	float WallJumpUpwardForce = 1200.0f;
 
 	// 대쉬
 	UPROPERTY(EditAnywhere, Category = "Movement-Dash")

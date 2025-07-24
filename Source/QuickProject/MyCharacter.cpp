@@ -248,6 +248,34 @@ void AMyCharacter::Tick(float DeltaTime)
 }
 void AMyCharacter::Jump()
 {
+	UCharacterMovementComponent* MoveComp = GetCharacterMovement();
+
+	if (MoveComp->IsFalling())
+	{
+		FVector Start = GetActorLocation();
+		FVector Right = GetActorRightVector();
+		FVector Forward = GetActorForwardVector();
+		FHitResult HitResult;
+
+		FVector Directions[] = { Right, -Right, Forward, -Forward };
+		for (const FVector& Direction : Directions)
+		{
+			if (GetWorld()->LineTraceSingleByChannel(HitResult, Start, Start + Direction * 100.f, ECC_Visibility))
+			{
+				FVector WallNormal = HitResult.Normal;
+				FVector LaunchVelocity = WallNormal * WallJumpHorizontalForce + FVector::UpVector * WallJumpUpwardForce;
+
+				LaunchCharacter(LaunchVelocity, true, true);
+
+				JumpCurrentCount = JumpMaxCount - 1;
+
+				UE_LOG(LogTemp, Warning, TEXT("Wall with Normal: %s"), *WallNormal.ToString());
+				
+				// 벽점프했으면 바로 종료
+				return;
+			}
+		}
+	}
 	// 더블 점프 디버그용
 	UE_LOG(LogTemp, Warning, TEXT("jump: current jump count %d"), JumpCurrentCount);
 	Super::Jump();	
