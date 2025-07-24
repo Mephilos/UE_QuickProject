@@ -72,13 +72,10 @@ protected:
 	float SlideFriction = 0.1f;
 	UPROPERTY(EditAnywhere, Category = "Movement-Slide")
 	UCurveFloat* SlideSpeedCurve;
-	// 슬라이딩시 FOV값 변경
-	UPROPERTY(EditAnywhere, Category = "Movement-Slide")
-	UCurveFloat* SlideFOVCurve;
 
 	FTimeline SlideTimeline;
 	FTimerHandle SlideTimerHandle;
-
+	float SlideInitialSpeed; // 슬라이딩 시점 속도를 저장하는 변수
 	float DefaultFriction; // 기존 마찰력 보존 하기 위한 변수
 
 	// 벽점프
@@ -121,8 +118,6 @@ protected:
 	void StopSlide();
 	UFUNCTION()
 	void UpdateSlide(float Value);
-	UFUNCTION()
-	void UpdateSlideFOV(float Value);
 
 	// 이동 함수
 	void Move(const FInputActionValue& Value);

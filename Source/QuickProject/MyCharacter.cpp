@@ -71,13 +71,6 @@ void AMyCharacter::BeginPlay()
 		ProgressFunction.BindUFunction(this, FName("UpdateSlide"));
 		SlideTimeline.AddInterpFloat(SlideSpeedCurve, ProgressFunction);
 	}
-
-	if (SlideFOVCurve)
-	{
-		FOnTimelineFloat FOVFunction;
-		FOVFunction.BindUFunction(this, FName("UpdateSlideFOV"));
-		SlideTimeline.AddInterpFloat(SlideFOVCurve, FOVFunction);
-	}
 }
 
 void AMyCharacter::Move(const FInputActionValue& Value)
@@ -249,8 +242,16 @@ void AMyCharacter::DodgeLeft()
 
 void AMyCharacter::StartSlide()
 {
-	if (GetCharacterMovement()->IsMovingOnGround())
+	// 캐릭터가 땅에있고 속도가 최소 슬라이드 속도보다 빠른 때만 작동
+	if (GetCharacterMovement()->IsMovingOnGround() && GetCharacterMovement()->Velocity.Size() >= MinSlideSpeed)
 	{
+		// 슬라이딩 시작 시점 속도 저장
+		SlideInitialSpeed = GetVelocity().Size2D();
+
+		// 마찰력 제동력 비활성화
+		GetCharacterMovement()->GroundFriction = 0.f;
+		GetCharacterMovement()->BrakingDecelerationWalking = 0.f;
+
 		Crouch();
 		SlideTimeline.PlayFromStart();
 	}
@@ -287,6 +288,9 @@ void AMyCharacter::StopSlide()
 {
 	UnCrouch();
 	SlideTimeline.Stop();
+	// 슬라이딩 끝나고 수치 복구
+	GetCharacterMovement()->GroundFriction = 10.f;
+	GetCharacterMovement()->BrakingDecelerationWalking = 8000.f;
 
 	if (auto* Camera = FindComponentByClass<UCameraComponent>())
 	{
@@ -306,17 +310,24 @@ void AMyCharacter::StopSlide()
 
 void AMyCharacter::UpdateSlide(float Value)
 {
+	// 커브 비율로 계산 (1.0 ~ 0.1로 설정했음)
+	float NewSpeed = SlideInitialSpeed * Value;
 	FVector Direction = GetLastMovementInputVector().IsNearlyZero() ? GetActorForwardVector() : GetLastMovementInputVector();
-	GetCharacterMovement()->Velocity = Direction * Value;
-}
+	GetCharacterMovement()->Velocity = Direction * NewSpeed;
 
-void AMyCharacter::UpdateSlideFOV(float Value)
-{
+	// FOV를 속도 비율에 따라서 조절 하도록
 	if (auto* Camera = FindComponentByClass<UCameraComponent>())
 	{
-		Camera->SetFieldOfView(Value);
+		// 포브 설정
+		float DefaultFOV = 90.f;
+		float MaxFOV = 105.f;
+
+		// Value에 따라서 변경 보간 추가
+		float NewFOV = FMath::Lerp(DefaultFOV, MaxFOV, Value);
+		Camera->SetFieldOfView(NewFOV);
 	}
 }
+
 // Called every frame
 void AMyCharacter::Tick(float DeltaTime)
 {
