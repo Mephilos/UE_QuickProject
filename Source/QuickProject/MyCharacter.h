@@ -32,21 +32,29 @@ protected:
 	// 현재 대쉬 스택
 	UPROPERTY(BlueprintReadOnly, Category = "Movement")
 	int32 CurrentDashCharges;
-
-	// bool bCanDash = true;
-
+	
 	FTimerHandle DashRechargeCooldownHandle;
+
+	//// 닷지 변수
+	//float DodgeDistance = 2000.0f;
+	//float DodgeCooldown = 0.2f;
+	//float LastForwardPressTime = 0.f;
+	//float LastRightPressTime = 0.f;
+
 
 	// 이동 함수
 	void Dash();
 	void DashRecharge();
 	void MoveForward(float Value);
 	void MoveRight(float Value);
+	//void Dodge(FVector DodgeDirection);
+	//void DodgeChecker(float& LastPressTime, FVector DodgeDirection);
 
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	virtual void Jump() override;
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 

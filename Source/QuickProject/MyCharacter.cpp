@@ -14,6 +14,25 @@ AMyCharacter::AMyCharacter()
 	CurrentDashCharges = MaxDashCharges; // 게임 시작시 대쉬 스택 만땅
 
 	JumpMaxCount = 2;
+	// 케릭터 컴포넌트 가져오기
+	//UCharacterMovementComponent* MoveComp = GetCharacterMovement();
+
+	//// 최대 이동속도
+	//MoveComp->MaxWalkSpeed = 1000.0f;
+	//// 가속도
+	//MoveComp->MaxAcceleration = 8000.0f;
+	//// 마찰력
+	//MoveComp->GroundFriction = 8.0f;
+	//// 제동력
+	//MoveComp->BrakingDecelerationWalking = 8000.0f;
+	//// 공중 제어력
+	//MoveComp->AirControl = 1.0f;
+	//// 중력 스케일 증가
+	//MoveComp->GravityScale = 1.0f;
+	//// 공중 마찰력
+	//MoveComp->FallingLateralFriction = 3.0f;
+
+	
 }
 
 // Called when the game starts or when spawned
@@ -26,6 +45,9 @@ void AMyCharacter::MoveForward(float Value)
 {
 	if (Value != 0.0f)
 	{
+		// 키 입력시
+		//FVector Direction = GetActorForwardVector() * FMath::Sign(Value);
+		//DodgeChecker(LastForwardPressTime, Direction); // 닷지 체커
 		AddMovementInput(GetActorForwardVector(), Value);
 	}
 }
@@ -34,9 +56,30 @@ void AMyCharacter::MoveRight(float Value)
 {
 	if (Value != 0.0f)
 	{
+		// 키 입력시
+		//FVector Direction = GetActorRightVector() * FMath::Sign(Value);
+		//DodgeChecker(LastRightPressTime, Direction); // 닷치 체커
 		AddMovementInput(GetActorRightVector(), Value);
 	}
 }
+
+//void AMyCharacter::DodgeChecker(float& LastPressTime, FVector DodgeDirection)
+//{
+//	if (GetWorld()->GetTimeSeconds() - LastPressTime <= DodgeCooldown)
+//	{
+//		Dodge(DodgeDirection);
+//		LastPressTime = 0.f;
+//	}
+//	else
+//	{
+//		LastPressTime = GetWorld()->GetTimeSeconds();
+//	}
+//}
+
+//void AMyCharacter::Dodge(FVector DodgeDirection)
+//{
+//	LaunchCharacter(DodgeDirection.GetSafeNormal() * DodgeDistance, true, false);
+//}
 
 void AMyCharacter::Dash()
 {
@@ -53,7 +96,7 @@ void AMyCharacter::Dash()
 			DashDirection = GetActorForwardVector();
 		}
 		// 대쉬
-		LaunchCharacter(DashDirection.GetSafeNormal() * DashDistance, true, true);
+		LaunchCharacter(DashDirection.GetSafeNormal() * DashDistance, true, false);
 		// 스택 타이머가 실행 중이 아닐 때만 실행
 		if (!GetWorld()->GetTimerManager().IsTimerActive(DashRechargeCooldownHandle))
 		{
@@ -78,6 +121,12 @@ void AMyCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+}
+void AMyCharacter::Jump()
+{
+	// 더블 점프 디버그용
+	UE_LOG(LogTemp, Warning, TEXT("jump: current jump count %d"), JumpCurrentCount);
+	Super::Jump();	
 }
 
 // Called to bind functionality to input
