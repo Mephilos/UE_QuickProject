@@ -63,7 +63,7 @@ protected:
 	UInputAction* CrouchAction;
 
 	UPROPERTY(EditAnywhere, Category = "Movement-Slide")
-	float MinSlideSpeed = 1000.0f; // 슬라이딩 발동 가능 속도
+	float MinSlideSpeed = 100.0f; // 슬라이딩 발동 가능 속도
 
 	UPROPERTY(EditAnywhere, Category = "Movement-Slide")
 	float SlideFriction = 0.1f;
@@ -78,9 +78,9 @@ protected:
 
 	// 벽점프
 	UPROPERTY(EditAnywhere, Category = "Movement-WallJump")
-	float WallJumpHorizontalForce = 1500.0f;
+	float WallJumpHorizontalForce = 1000.0f;
 	UPROPERTY(EditAnywhere, Category = "Movement-WallJump")
-	float WallJumpUpwardForce = 1200.0f;
+	float WallJumpUpwardForce = 1000.0f;
 
 	// 대쉬
 	UPROPERTY(EditAnywhere, Category = "Movement-Dash")

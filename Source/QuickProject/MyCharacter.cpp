@@ -39,7 +39,7 @@ AMyCharacter::AMyCharacter()
 	// 가속도
 	MoveComp->MaxAcceleration = 2000.0f;
 	// 마찰력
-	MoveComp->GroundFriction = 10.0f;
+	MoveComp->GroundFriction = 100.0f;
 	// 제동력
 	MoveComp->BrakingDecelerationWalking = 8000.0f;
 	// 공중 제어력
