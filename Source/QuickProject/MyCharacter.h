@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -15,11 +13,8 @@ UCLASS()
 class QUICKPROJECT_API AMyCharacter : public ACharacter
 {
 	GENERATED_BODY()
-
 public:
-	// Sets default values for this character's properties
 	AMyCharacter();
-
 protected:
 	// 인핸스드 인풋 기본 이동
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
@@ -33,7 +28,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
 	UInputAction* JumpAction;
-
+	
 	// 대쉬
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
 	UInputAction* DashAction;
@@ -50,7 +45,8 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
 	UInputAction* DodgeLeftAction;
-	
+
+
 	UPROPERTY(EditAnywhere, Category = "Movement-Dodge")
 	float DodgeDistance = 2500.0f;
 
@@ -61,15 +57,17 @@ protected:
 	float LastBackwardTapTime = 0.f;
 	float LastRightTapTime = 0.f;
 	float LastLeftTapTime = 0.f;
-	// 앉기(슬라이딩)
+
+	// 앉기 (슬라이딩)
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
 	UInputAction* CrouchAction;
-	
+
 	UPROPERTY(EditAnywhere, Category = "Movement-Slide")
-	float MinSlideSpeed = 1500.0f; // 슬라이딩 발동 가능 속도
+	float MinSlideSpeed = 1000.0f; // 슬라이딩 발동 가능 속도
 
 	UPROPERTY(EditAnywhere, Category = "Movement-Slide")
 	float SlideFriction = 0.1f;
+
 	UPROPERTY(EditAnywhere, Category = "Movement-Slide")
 	UCurveFloat* SlideSpeedCurve;
 
@@ -87,14 +85,13 @@ protected:
 	// 대쉬
 	UPROPERTY(EditAnywhere, Category = "Movement-Dash")
 	float DashDistance = 5000.0f;
-
 	UPROPERTY(EditAnywhere, Category = "Movement-Dash")
 	float DashRechargeCooldown = 1.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement-Dash")
 	int32 MaxDashCharges = 3;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Movement-Dash")
+	UPROPERTY(EditAnywhere, Category = "Movement-Dash")
 	int32 CurrentDashCharges; // 대쉬 스택
 
 	FTimerHandle DashRechargeCooldownHandle;
@@ -119,19 +116,12 @@ protected:
 	UFUNCTION()
 	void UpdateSlide(float Value);
 
-	// 이동 함수
+	// 기본 이동 시점 함수
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 
-	//void Dodge(FVector DodgeDirection);
-	//void DodgeChecker(float& LastPressTime, FVector DodgeDirection);
-
 public:
-	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-
 	virtual void Jump() override;
-	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
 };

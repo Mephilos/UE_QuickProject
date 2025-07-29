@@ -35,7 +35,7 @@ AMyCharacter::AMyCharacter()
 	UCharacterMovementComponent* MoveComp = GetCharacterMovement();
 
 	// 최대 이동속도
-	MoveComp->MaxWalkSpeed = 2000.0f;
+	MoveComp->MaxWalkSpeed = 1500.0f;
 	// 가속도
 	MoveComp->MaxAcceleration = 2000.0f;
 	// 마찰력
@@ -45,7 +45,7 @@ AMyCharacter::AMyCharacter()
 	// 공중 제어력
 	MoveComp->AirControl = 0.5f;
 	// 중력 스케일 증가
-	MoveComp->GravityScale = 1.5f;
+	MoveComp->GravityScale = 1.0f;
 	// 공중 마찰력
 	MoveComp->FallingLateralFriction = 3.0f;
 	// 웅크리기 가능하게 설정
