@@ -1,6 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "MyCharacter.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -8,8 +5,10 @@
 #include "Components/InputComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "PhysicalMaterials/PhysicalMaterial.h"
 
-// Sets default values
+
 AMyCharacter::AMyCharacter()
 {
 	// 맴버 변수 초기화
@@ -24,6 +23,7 @@ AMyCharacter::AMyCharacter()
 	DodgeRightAction = nullptr;
 	DodgeLeftAction = nullptr;
 	DefaultFriction = 0.0f;
+	FireAction = nullptr;
 
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -328,13 +328,59 @@ void AMyCharacter::UpdateSlide(float Value)
 	}
 }
 
-// Called every frame
-void AMyCharacter::Tick(float DeltaTime)
+void AMyCharacter::Fire()
 {
-	Super::Tick(DeltaTime);
-	SlideTimeline.TickTimeline(DeltaTime);
+	if (!bCanFire || !CurrentWeaponData)
+	{
+		return;
+	}
 
+	bCanFire = false;
+
+	FVector CamLocation;
+	FRotator CamRotation;
+	Controller->GetPlayerViewPoint(CamLocation, CamRotation);
+
+	FVector TraceEnd = CamLocation + (CamRotation.Vector() * CurrentWeaponData->MaxRange);
+	FHitResult HitResult;
+	// 디버그: 라인으로 총알 궤적 표시 (빨간선이 2초 표시)
+	DrawDebugLine(GetWorld(), CamLocation, TraceEnd, FColor::Red, false, 2.0f, 0, 5.0f);
+	if (GetWorld()->LineTraceSingleByChannel(HitResult, CamLocation, TraceEnd, ECC_Visibility))
+	{
+		// 디버그: 스피어로 총알이 맞은 위치에 표시
+		DrawDebugSphere(GetWorld(), HitResult.ImpactPoint, 25.0f, 12, FColor::Green, false, 2.0f);
+		// 디버그: 맞은 액터 이름 표시
+		if (GEngine && HitResult.GetActor())
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Cyan, FString::Printf(TEXT("Hit(%s)"), *HitResult.GetActor()->GetName()));
+		}
+		
+		float DamageToApply = CurrentWeaponData->BaseDamage;
+		FString HitBone = HitResult.BoneName.ToString();
+
+		if (HitBone.Contains(TEXT("head"), ESearchCase::IgnoreCase))
+		{
+			DamageToApply *= CurrentWeaponData->HeadDamageMultiplier;
+			UE_LOG(LogTemp, Warning, TEXT("HeadShot"));
+		}
+		else if (HitBone.Contains(TEXT("arm")) || HitBone.Contains(TEXT("leg")))
+		{
+			DamageToApply *= CurrentWeaponData->LimbDamageMultiplier;
+			UE_LOG(LogTemp, Warning, TEXT("Limb Hit"));
+		}
+
+		UGameplayStatics::ApplyDamage(HitResult.GetActor(), DamageToApply, GetController(), this, nullptr);
+	}
+
+	// 쿨다운 타이머
+	GetWorld()->GetTimerManager().SetTimer(FireCooldownTimerHandle, this, &AMyCharacter::ResetFireCooldown, CurrentWeaponData->FireCooldown, false);
 }
+
+void AMyCharacter::ResetFireCooldown()
+{
+	bCanFire = true;
+}
+
 void AMyCharacter::Jump()
 {
 	// 케릭터 컴포넌트 가져오기
@@ -377,6 +423,21 @@ void AMyCharacter::Jump()
 	Super::Jump();	
 }
 
+float AMyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	float FinalDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	// TODO: 죽음 판정 로직 추가 예정
+	UE_LOG(LogTemp, Warning, TEXT("%s, %f Damage"), *GetName(), FinalDamage);
+
+	return FinalDamage;
+}
+
+void AMyCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+	SlideTimeline.TickTimeline(DeltaTime);
+}
+
 // Called to bind functionality to input
 void AMyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
@@ -397,6 +458,8 @@ void AMyCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 		// 앉기(슬라이딩)
 		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started, this, &AMyCharacter::StartSlide);
 		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Completed, this, &AMyCharacter::StopSlide);
+		// 공격
+		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Started, this, &AMyCharacter::Fire);
 
 	}
 	//Super::SetupPlayerInputComponent(PlayerInputComponent);

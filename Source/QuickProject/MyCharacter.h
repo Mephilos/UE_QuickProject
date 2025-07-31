@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Components/TimelineComponent.h"
+#include "WeaponDataAsset.h"
 #include "MyCharacter.generated.h"
 
 class UInputMappingContext;
@@ -13,8 +14,10 @@ UCLASS()
 class QUICKPROJECT_API AMyCharacter : public ACharacter
 {
 	GENERATED_BODY()
+
 public:
 	AMyCharacter();
+
 protected:
 	// 인핸스드 인풋 기본 이동
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
@@ -96,6 +99,17 @@ protected:
 
 	FTimerHandle DashRechargeCooldownHandle;
 
+	// 무기 셋
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
+	UInputAction* FireAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
+	UWeaponDataAsset* CurrentWeaponData;
+
+	FTimerHandle FireCooldownTimerHandle;
+	bool bCanFire = true;
+
+	
 
 	virtual void BeginPlay() override;
 
@@ -120,7 +134,14 @@ protected:
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 
+	// 무기 관련 함수
+	void Fire();
+	void ResetFireCooldown();
+	
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
+
 public:
+
 	virtual void Tick(float DeltaTime) override;
 	virtual void Jump() override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
