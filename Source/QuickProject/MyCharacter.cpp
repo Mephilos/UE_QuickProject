@@ -8,6 +8,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
 #include "Components/CapsuleComponent.h"
+#include "DeathmatchGameMode.h"
 
 
 AMyCharacter::AMyCharacter()
@@ -443,7 +444,25 @@ void AMyCharacter::Die()
 
 	GetMesh()->SetSimulatePhysics(true);
 
-	// TODO : 죽음 처리, 리스폰 처리 게임 모드에서 처리, 로직 요청하기 
+	//AController* MyController = GetController();
+	//if (MyController)
+	//{
+	//	UE_LOG(LogTemp, Error, TEXT("%s is dying. Controller is %s Class: %s"), *GetName(), 
+	//		*MyController->GetName(),
+	//		*MyController->GetClass()->GetName()
+	//	);
+	//}
+	//else
+	//{
+	//	UE_LOG(LogTemp, Error, TEXT("%s is dying. Controller is NULL"), *GetName());
+	//}
+
+	if (ADeathmatchGameMode* GameMode = GetWorld()->GetAuthGameMode<ADeathmatchGameMode>())
+	{
+		GameMode->PlayerDead(this, GetController(), LastDamageInstigator);
+	}
+
+	DetachFromControllerPendingDestroy();
 }
 
 float AMyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
@@ -452,6 +471,8 @@ float AMyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 	
 	if (FinalDamage > 0.f)
 	{
+		// 데미지 입힌 컨트롤러 저장
+		LastDamageInstigator = EventInstigator;
 		// 현재 체력에서 받은 데미지만큼 감소
 		CurrentHealth -= FinalDamage;
 		UE_LOG(LogTemp, Warning, TEXT("%s, %f Damage"), *GetName(), FinalDamage);
