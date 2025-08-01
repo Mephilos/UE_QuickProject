@@ -7,6 +7,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
+#include "Components/CapsuleComponent.h"
 
 
 AMyCharacter::AMyCharacter()
@@ -71,6 +72,8 @@ void AMyCharacter::BeginPlay()
 		ProgressFunction.BindUFunction(this, FName("UpdateSlide"));
 		SlideTimeline.AddInterpFloat(SlideSpeedCurve, ProgressFunction);
 	}
+	// 체력 초기화(최대로)
+	CurrentHealth = MaxHealth;
 }
 
 void AMyCharacter::Move(const FInputActionValue& Value)
@@ -423,12 +426,42 @@ void AMyCharacter::Jump()
 	Super::Jump();	
 }
 
+void AMyCharacter::Die()
+{
+	UE_LOG(LogTemp, Warning, TEXT("%s Dead"), *GetName());
+
+	// 켑슐 컴포넌트, 메쉬 콜리전 비활성화, 움직임 비활성화
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetCharacterMovement()->DisableMovement();
+
+	// 입력 비활성화
+	if (AController* PlayerController = GetController())
+	{
+		DisableInput(Cast<APlayerController>(PlayerController));
+	}
+
+	GetMesh()->SetSimulatePhysics(true);
+
+	// TODO : 죽음 처리, 리스폰 처리 게임 모드에서 처리, 로직 요청하기 
+}
+
 float AMyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
 	float FinalDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
-	// TODO: 죽음 판정 로직 추가 예정
-	UE_LOG(LogTemp, Warning, TEXT("%s, %f Damage"), *GetName(), FinalDamage);
-
+	
+	if (FinalDamage > 0.f)
+	{
+		// 현재 체력에서 받은 데미지만큼 감소
+		CurrentHealth -= FinalDamage;
+		UE_LOG(LogTemp, Warning, TEXT("%s, %f Damage"), *GetName(), FinalDamage);
+		// 체력이 0이하일 경우 죽음 함수 작동
+		if (CurrentHealth <= 0.f)
+		{
+			Die();
+		}
+	}
+	
 	return FinalDamage;
 }
 

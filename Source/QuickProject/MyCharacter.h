@@ -109,6 +109,13 @@ protected:
 	FTimerHandle FireCooldownTimerHandle;
 	bool bCanFire = true;
 
+	// 바이탈 관련
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health") 
+	float MaxHealth = 100.0f; // 체력
+
+	UPROPERTY(BlueprintReadOnly, Category = "Health")
+	float CurrentHealth;
+
 	
 
 	virtual void BeginPlay() override;
@@ -138,8 +145,10 @@ protected:
 	void Fire();
 	void ResetFireCooldown();
 	
+	// 바이탈 관련 함수
+	void Die();
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
-
+	
 public:
 
 	virtual void Tick(float DeltaTime) override;
