@@ -7,14 +7,23 @@
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/Character.h"
 
-void ADeathmatchGameMode::PlayerDead(ACharacter* DeadCharacter, AController* DeadPlayerController, AController* KillerController)
+void ADeathmatchGameMode::PlayerDead(ACharacter* DeadCharacter, AController* DeadPlayerController, AController* KillerController, bool bHeadshot)
 {
 	if (KillerController && KillerController != DeadPlayerController)
 	{
 		if (ADeathmatchPlayerState* KillerPlayerState = KillerController->GetPlayerState<ADeathmatchPlayerState>())
 		{
-			// TODE: 해드샷 추가 점수 예정
-			KillerPlayerState->AddScore(1);
+			// 해드샷이면
+			if (bHeadshot)
+			{
+				KillerPlayerState->AddScore(15);
+				UE_LOG(LogTemp, Warning, TEXT("Headshot score +15"));
+			}
+			else
+			{
+				KillerPlayerState->AddScore(10);
+				UE_LOG(LogTemp, Warning, TEXT("GYANG kill +10"));
+			}
 		}
 	}
 

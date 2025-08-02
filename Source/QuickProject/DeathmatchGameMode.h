@@ -20,7 +20,7 @@ protected:
 
 public:
 
-	void PlayerDead(ACharacter* DeadCharacter, AController* DeadPlayerController, AController* KillerController);
+	void PlayerDead(ACharacter* DeadCharacter, AController* DeadPlayerController, AController* KillerController, bool bHeadshot);
 	
 	// 더미 리스폰 함수
 	void RespawnDummy();

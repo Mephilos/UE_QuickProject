@@ -9,7 +9,7 @@
 #include "PhysicalMaterials/PhysicalMaterial.h"
 #include "Components/CapsuleComponent.h"
 #include "DeathmatchGameMode.h"
-
+#include "Engine/DamageEvents.h"
 
 AMyCharacter::AMyCharacter()
 {
@@ -372,8 +372,8 @@ void AMyCharacter::Fire()
 			DamageToApply *= CurrentWeaponData->LimbDamageMultiplier;
 			UE_LOG(LogTemp, Warning, TEXT("Limb Hit"));
 		}
-
-		UGameplayStatics::ApplyDamage(HitResult.GetActor(), DamageToApply, GetController(), this, nullptr);
+		// Point 정보로 데미지 적용: 맞은 액터, 적용 데미지, 총알 방향, 피격 정보 전달, 공격자 컨트롤러, 공격자 액터, 데미지 타입 클래스(기본값 설정)
+		UGameplayStatics::ApplyPointDamage(HitResult.GetActor(), DamageToApply, CamRotation.Vector(), HitResult, GetController(), this, nullptr);
 	}
 
 	// 쿨다운 타이머
@@ -459,7 +459,7 @@ void AMyCharacter::Die()
 
 	if (ADeathmatchGameMode* GameMode = GetWorld()->GetAuthGameMode<ADeathmatchGameMode>())
 	{
-		GameMode->PlayerDead(this, GetController(), LastDamageInstigator);
+		GameMode->PlayerDead(this, GetController(), LastDamageInstigator, bByHeadshotDead);
 	}
 
 	DetachFromControllerPendingDestroy();
@@ -471,6 +471,24 @@ float AMyCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 	
 	if (FinalDamage > 0.f)
 	{
+		// 데미지 이벤트 ID 판별 (PointDamageEvent와 일치하는가(해드샷은 총으로만 하게끔))
+		if (DamageEvent.IsOfType(FPointDamageEvent::ClassID))
+		{
+			// 데미지 이번트 포인트 데미지 이벤트로 케스트
+			FPointDamageEvent const* PointDamageEvent = (FPointDamageEvent const*)&DamageEvent;
+			
+			// HitInfo의 본네임으로 대가리 판별
+			if (PointDamageEvent->HitInfo.BoneName.ToString().Contains(TEXT("head")))
+			{
+				bByHeadshotDead = true;
+			}
+			else
+			{
+				bByHeadshotDead = false;
+			}
+			
+		}
+		
 		// 데미지 입힌 컨트롤러 저장
 		LastDamageInstigator = EventInstigator;
 		// 현재 체력에서 받은 데미지만큼 감소

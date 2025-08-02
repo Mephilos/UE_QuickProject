@@ -118,6 +118,7 @@ protected:
 
 	// 마지막으로 나를 공격한 컨트롤러(스코어 판정위해)
 	AController* LastDamageInstigator;
+	bool bByHeadshotDead = false; // 해드샷 판정 변수
 
 
 	virtual void BeginPlay() override;
