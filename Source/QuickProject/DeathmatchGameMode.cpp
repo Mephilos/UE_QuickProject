@@ -6,6 +6,16 @@
 #include "GameFramework/PlayerStart.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/Character.h"
+#include "GameFramework/GameStateBase.h"
+
+
+void ADeathmatchGameMode::BeginPlay()
+{
+	Super::BeginPlay();
+
+	GetWorld()->GetTimerManager().SetTimer(MatchTimerHandle, this, &ADeathmatchGameMode::OnMatchEnd, MatchTime, false);	
+	UE_LOG(LogTemp, Warning, TEXT("Match Time: %d sec"), MatchTime);
+}
 
 void ADeathmatchGameMode::PlayerDead(ACharacter* DeadCharacter, AController* DeadPlayerController, AController* KillerController, bool bHeadshot)
 {
@@ -71,4 +81,31 @@ void ADeathmatchGameMode::RespawnDummy()
 		GetWorld()->SpawnActor<ACharacter>(DummyCharacterClass, SpawnPoint->GetActorLocation(), SpawnPoint->GetActorRotation());
 		UE_LOG(LogTemp, Warning, TEXT("Dummy Spawn"));
 	}
+}
+void ADeathmatchGameMode::OnMatchEnd()
+{
+	ADeathmatchPlayerState* WinnerPlayerState = nullptr;
+	int32 MaxScore = -1;
+
+	for (APlayerState* PlayerState : GetWorld()->GetGameState()->PlayerArray)
+	{
+		if (ADeathmatchPlayerState* DMPlayerState = Cast<ADeathmatchPlayerState>(PlayerState))
+		{
+			if (DMPlayerState->GetScore() > MaxScore)
+			{
+				MaxScore = DMPlayerState->GetScore();
+				WinnerPlayerState = DMPlayerState;
+			}
+		}
+	}
+
+	if (WinnerPlayerState)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Winner: %s, Score: %f"), *WinnerPlayerState->GetPlayerName(), WinnerPlayerState->GetScore());
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Mathc Draw"));
+	}
+	// UE_LOG(LogTemp, Warning, TEXT("Match Done"));
 }
