@@ -10,6 +10,7 @@
 #include "Components/CapsuleComponent.h"
 #include "DeathmatchGameMode.h"
 #include "Engine/DamageEvents.h"
+#include "Net/UnrealNetwork.h"
 
 AMyCharacter::AMyCharacter()
 {
@@ -30,6 +31,10 @@ AMyCharacter::AMyCharacter()
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	
+	bUseControllerRotationYaw = true;
+	bUseControllerRotationPitch = false;
+	bUseControllerRotationRoll = false;
+
 	CurrentDashCharges = MaxDashCharges; // 게임 시작시 대쉬 스택 만땅
 
 	JumpMaxCount = 2;
@@ -82,8 +87,16 @@ void AMyCharacter::Move(const FInputActionValue& Value)
 	FVector2D MovementVector = Value.Get<FVector2D>();
 	if (Controller != nullptr)
 	{
-		AddMovementInput(GetActorForwardVector(), MovementVector.Y);
-		AddMovementInput(GetActorRightVector(), MovementVector.X);
+		// 컨트롤러 회전 값 가져오기
+		const FRotator Rotation = Controller->GetControlRotation();
+		// 수평 방향만 가져오기 롤, 피치는 0로
+		const FRotator YawRotation(0, Rotation.Yaw, 0);
+		// YawRotation으로 백터 x y 조정
+		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+		
+		AddMovementInput(ForwardDirection, MovementVector.Y);
+		AddMovementInput(RightDirection, MovementVector.X);
 	}
 }
 
@@ -137,7 +150,7 @@ void AMyCharacter::Look(const FInputActionValue& Value)
 //	LaunchCharacter(DodgeDirection.GetSafeNormal() * DodgeDistance, true, false);
 //}
 
-void AMyCharacter::Dash()
+void AMyCharacter::Dash_Implementation()
 {
 	if (CurrentDashCharges > 0) // 대쉬 스택이 남아 있을 때 실행
 	{
@@ -159,14 +172,20 @@ void AMyCharacter::Dash()
 		DashDirection = DashDirection.GetSafeNormal();
 		// 대쉬
 		LaunchCharacter(DashDirection * DashDistance, true, false);
-		// 스택 타이머가 실행 중이 아닐 때만 실행
-		if (!GetWorld()->GetTimerManager().IsTimerActive(DashRechargeCooldownHandle))
+		
+		// 쿨다운 타이머는 서버에서만 사용 되더록
+		if (HasAuthority())
 		{
-			// DashRechargeCooldown 마다 반복 실행되도록
-			GetWorld()->GetTimerManager().SetTimer(DashRechargeCooldownHandle, this, &AMyCharacter::DashRecharge, DashRechargeCooldown, true);
+			// 스택 타이머가 실행 중이 아닐 때만 실행
+			if (!GetWorld()->GetTimerManager().IsTimerActive(DashRechargeCooldownHandle))
+			{
+				// DashRechargeCooldown 마다 반복 실행되도록
+				GetWorld()->GetTimerManager().SetTimer(DashRechargeCooldownHandle, this, &AMyCharacter::DashRecharge, DashRechargeCooldown, true);
+			}
 		}
 	}
 }
+
 void AMyCharacter::DashRecharge()
 {
 	CurrentDashCharges++; // 대쉬 스택 ++
@@ -243,21 +262,41 @@ void AMyCharacter::DodgeLeft()
 		LastLeftTapTime = GetWorld()->GetTimeSeconds();
 	}
 }
+void AMyCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-void AMyCharacter::StartSlide()
+	DOREPLIFETIME(AMyCharacter, bSliding);
+}
+
+void AMyCharacter::Rep_bSliding()
+{
+	if (bSliding)
+	{
+		Crouch();
+		SlideTimeline.PlayFromStart();
+	}
+	else
+	{
+		UnCrouch();
+		SlideTimeline.Stop();
+	}
+}
+void AMyCharacter::StartSlide_Implementation()
 {
 	// 캐릭터가 땅에있고 속도가 최소 슬라이드 속도보다 빠른 때만 작동
 	if (GetCharacterMovement()->IsMovingOnGround() && GetCharacterMovement()->Velocity.Size() >= MinSlideSpeed)
 	{
+		// 서버는 슬라이딩 판별 변수만 수정
+		bSliding = true;
+		// 서버도 Rep_bSliding 함수를 수동호출해 즉시 적용
+		Rep_bSliding();
 		// 슬라이딩 시작 시점 속도 저장
 		SlideInitialSpeed = GetVelocity().Size2D();
 
 		// 마찰력 제동력 비활성화
 		GetCharacterMovement()->GroundFriction = 0.f;
 		GetCharacterMovement()->BrakingDecelerationWalking = 0.f;
-
-		Crouch();
-		SlideTimeline.PlayFromStart();
 	}
 	//if (GetCharacterMovement()->Velocity.Size() >= MinSlideSpeed && GetCharacterMovement()->IsMovingOnGround())
 	//{
@@ -288,18 +327,19 @@ void AMyCharacter::StartSlide()
 	//}
 }
 
-void AMyCharacter::StopSlide()
+void AMyCharacter::StopSlide_Implementation()
 {
-	UnCrouch();
-	SlideTimeline.Stop();
+	bSliding = false;
+
+	Rep_bSliding();
 	// 슬라이딩 끝나고 수치 복구
 	GetCharacterMovement()->GroundFriction = 10.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 8000.f;
 
-	if (auto* Camera = FindComponentByClass<UCameraComponent>())
+	/*if (auto* Camera = FindComponentByClass<UCameraComponent>())
 	{
 		Camera->SetFieldOfView(90.0f);
-	}
+	}*/
 	//// 마찰력 복구
 	//GetCharacterMovement()->GroundFriction = DefaultFriction;
 
@@ -314,10 +354,13 @@ void AMyCharacter::StopSlide()
 
 void AMyCharacter::UpdateSlide(float Value)
 {
-	// 커브 비율로 계산 (1.0 ~ 0.1로 설정했음)
-	float NewSpeed = SlideInitialSpeed * Value;
-	FVector Direction = GetLastMovementInputVector().IsNearlyZero() ? GetActorForwardVector() : GetLastMovementInputVector();
-	GetCharacterMovement()->Velocity = Direction * NewSpeed;
+	if (HasAuthority()) // 서버 확인
+	{
+		// 커브 비율로 계산 (1.0 ~ 0.1로 설정했음)
+		float NewSpeed = SlideInitialSpeed * Value;
+		FVector Direction = GetLastMovementInputVector().IsNearlyZero() ? GetActorForwardVector() : GetLastMovementInputVector();
+		GetCharacterMovement()->Velocity = Direction * NewSpeed;
+	}
 
 	// FOV를 속도 비율에 따라서 조절 하도록
 	if (auto* Camera = FindComponentByClass<UCameraComponent>())
@@ -340,16 +383,25 @@ void AMyCharacter::Fire()
 	}
 
 	bCanFire = false;
+	// 쿨다운 타이머
+	GetWorld()->GetTimerManager().SetTimer(FireCooldownTimerHandle, this, &AMyCharacter::ResetFireCooldown, CurrentWeaponData->FireCooldown, false);
 
 	FVector CamLocation;
 	FRotator CamRotation;
 	Controller->GetPlayerViewPoint(CamLocation, CamRotation);
-
 	FVector TraceEnd = CamLocation + (CamRotation.Vector() * CurrentWeaponData->MaxRange);
+	
+	// 서버 RPC함수를 호출, 서버에 발사 요청
+	Server_Fire(CamLocation, TraceEnd);
+}
+
+void AMyCharacter::Server_Fire_Implementation(const FVector& TraceStart, const FVector& TraceEnd)
+{
 	FHitResult HitResult;
+
 	// 디버그: 라인으로 총알 궤적 표시 (빨간선이 2초 표시)
-	DrawDebugLine(GetWorld(), CamLocation, TraceEnd, FColor::Red, false, 2.0f, 0, 5.0f);
-	if (GetWorld()->LineTraceSingleByChannel(HitResult, CamLocation, TraceEnd, ECC_Visibility))
+	DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Red, false, 2.0f, 0, 5.0f);
+	if (GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECC_Visibility))
 	{
 		// 디버그: 스피어로 총알이 맞은 위치에 표시
 		DrawDebugSphere(GetWorld(), HitResult.ImpactPoint, 25.0f, 12, FColor::Green, false, 2.0f);
@@ -358,7 +410,7 @@ void AMyCharacter::Fire()
 		{
 			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Cyan, FString::Printf(TEXT("Hit(%s)"), *HitResult.GetActor()->GetName()));
 		}
-		
+
 		float DamageToApply = CurrentWeaponData->BaseDamage;
 		FString HitBone = HitResult.BoneName.ToString();
 
@@ -373,11 +425,8 @@ void AMyCharacter::Fire()
 			UE_LOG(LogTemp, Warning, TEXT("Limb Hit"));
 		}
 		// Point 정보로 데미지 적용: 맞은 액터, 적용 데미지, 총알 방향, 피격 정보 전달, 공격자 컨트롤러, 공격자 액터, 데미지 타입 클래스(기본값 설정)
-		UGameplayStatics::ApplyPointDamage(HitResult.GetActor(), DamageToApply, CamRotation.Vector(), HitResult, GetController(), this, nullptr);
+		UGameplayStatics::ApplyPointDamage(HitResult.GetActor(), DamageToApply, (TraceEnd - TraceStart).GetSafeNormal(), HitResult, GetController(), this, nullptr);
 	}
-
-	// 쿨다운 타이머
-	GetWorld()->GetTimerManager().SetTimer(FireCooldownTimerHandle, this, &AMyCharacter::ResetFireCooldown, CurrentWeaponData->FireCooldown, false);
 }
 
 void AMyCharacter::ResetFireCooldown()

@@ -19,6 +19,56 @@ public:
 	AMyCharacter();
 
 protected:
+
+
+	virtual void BeginPlay() override;
+
+	// 대쉬 함수
+	UFUNCTION(Server, Reliable)
+	void Dash();
+	void DashRecharge();
+
+	// 닷지 함수
+	void DodgeForward();
+	void DodgeBackward();
+	void DodgeRight();
+	void DodgeLeft();
+	void PerformDodge(const FVector& Direction);
+
+
+	// 슬라이딩 함수
+	UFUNCTION()
+	void Rep_bSliding();
+
+	UFUNCTION(Server, Reliable)
+	void StartSlide();
+
+	UFUNCTION(Server, Reliable)
+	void StopSlide();
+
+
+	UFUNCTION()
+	void UpdateSlide(float Value);
+
+	// 기본 이동 시점 함수
+	void Move(const FInputActionValue& Value);
+	void Look(const FInputActionValue& Value);
+
+	// 무기 관련 함수
+	void Fire();
+
+	UFUNCTION(Server, Reliable)
+	void Server_Fire(const FVector& TraceStart, const FVector& TraceEnd);
+
+	void ResetFireCooldown();
+
+	// 바이탈 관련 함수
+	void Die();
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
+
+	// Replicated를 위한 변수 복제 함수 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	// 인핸스드 인풋 기본 이동
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enhanced Input")
 	UInputMappingContext* DefaultMappingContext;
@@ -73,6 +123,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Movement-Slide")
 	UCurveFloat* SlideSpeedCurve;
+	
+	UPROPERTY(Replicated, ReplicatedUsing = Rep_bSliding)
+	bool bSliding = false;
 
 	FTimeline SlideTimeline;
 	FTimerHandle SlideTimerHandle;
@@ -120,38 +173,6 @@ protected:
 	AController* LastDamageInstigator;
 	bool bByHeadshotDead = false; // 해드샷 판정 변수
 
-
-	virtual void BeginPlay() override;
-
-	// 대쉬 함수
-	void Dash();
-	void DashRecharge();
-
-	// 닷지 함수
-	void DodgeForward();
-	void DodgeBackward();
-	void DodgeRight();
-	void DodgeLeft();
-	void PerformDodge(const FVector& Direction);
-
-	// 슬라이딩 함수
-	void StartSlide();
-	void StopSlide();
-	UFUNCTION()
-	void UpdateSlide(float Value);
-
-	// 기본 이동 시점 함수
-	void Move(const FInputActionValue& Value);
-	void Look(const FInputActionValue& Value);
-
-	// 무기 관련 함수
-	void Fire();
-	void ResetFireCooldown();
-	
-	// 바이탈 관련 함수
-	void Die();
-	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
-	
 public:
 
 	virtual void Tick(float DeltaTime) override;
