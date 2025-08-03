@@ -40,10 +40,11 @@ protected:
 	void DodgeLeft();
 
 	// 슬라이딩 함수
+	void StartSlide();
 	UFUNCTION()
 	void OnRep_bSliding();
 	UFUNCTION(Server, Reliable)
-	void StartSlide();
+	void Server_StartSlide(float InitialSpeed, const FVector& Direction);
 	UFUNCTION(Server, Reliable)
 	void StopSlide();
 	UFUNCTION()

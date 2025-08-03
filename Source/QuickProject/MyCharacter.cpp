@@ -285,23 +285,30 @@ void AMyCharacter::OnRep_bSliding()
 		SlideTimeline.Stop();
 	}
 }
-void AMyCharacter::StartSlide_Implementation()
+void AMyCharacter::StartSlide()
 {
-	// 캐릭터가 땅에있고 속도가 최소 슬라이드 속도보다 빠른 때만 작동
 	if (GetCharacterMovement()->IsMovingOnGround() && GetCharacterMovement()->Velocity.Size() >= MinSlideSpeed)
 	{
-		// 서버는 슬라이딩 판별 변수만 수정
-		bSliding = true;
-		// 서버도 Rep_bSliding 함수를 수동호출해 즉시 적용
-		OnRep_bSliding();
-		// 슬라이딩 시작 시점 속도 저장
-		SlideInitialSpeed = GetVelocity().Size2D();
-		SlideDirection = GetVelocity().GetSafeNormal();
-
-		// 마찰력 제동력 비활성화
-		GetCharacterMovement()->GroundFriction = 0.f;
-		GetCharacterMovement()->BrakingDecelerationWalking = 0.f;
+		// 슬라이딩 시작 시점 속도
+		float InitialSpeed = GetVelocity().Size2D();
+		// 슬라이딩 방향
+		FVector Direction = GetVelocity().GetSafeNormal();
+		// 서버로 전달
+		Server_StartSlide(InitialSpeed, Direction);
 	}
+}
+void AMyCharacter::Server_StartSlide_Implementation(float InitialSpeed, const FVector& Direction)
+{
+	bSliding = true;
+	// 서버도 Rep_bSliding 함수를 수동호출해 즉시 적용
+	OnRep_bSliding();
+	// 슬라이딩 시작 시점 속도 저장
+	SlideInitialSpeed = InitialSpeed;
+	SlideDirection = Direction;
+
+	// 마찰력 제동력 비활성화
+	GetCharacterMovement()->GroundFriction = 0.f;
+	GetCharacterMovement()->BrakingDecelerationWalking = 0.f;
 	//if (GetCharacterMovement()->Velocity.Size() >= MinSlideSpeed && GetCharacterMovement()->IsMovingOnGround())
 	//{
 	//	// 원래 마찰력 저장
@@ -364,8 +371,8 @@ void AMyCharacter::UpdateSlide(float Value)
 		float NewSpeed = SlideInitialSpeed * Value;
 		if (GEngine)
 		{
-			// 서버 화면 왼쪽 위에 NewSpeed와 SlideDirection 값을 초록색으로 표시합니다.
-			FString DebugMsg = FString::Printf(TEXT("SERVER SLIDE - Speed: %.2f, Direction: %s"), NewSpeed, *SlideDirection.ToString());
+			// 서버 화면 왼쪽 위에 NewSpeed와 SlideDirection 값을 초록색으로 표시
+			FString DebugMsg = FString::Printf(TEXT("SERVER SLIDE Speed: %.2f, Direction: %s"), NewSpeed, *SlideDirection.ToString());
 			GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Green, DebugMsg);
 		}
 		//FVector Direction = GetCharacterMovement()->GetLastUpdateVelocity().GetSafeNormal();
