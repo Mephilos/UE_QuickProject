@@ -56,6 +56,8 @@ AMyCharacter::AMyCharacter()
 	MoveComp->FallingLateralFriction = 3.0f;
 	// 웅크리기 가능하게 설정
 	MoveComp->NavAgentProps.bCanCrouch = true;
+	// 웅크리기 상태에서 단차 밖으로 나갈수 있게 설정
+	MoveComp->bCanWalkOffLedgesWhenCrouching = true;
 }
 
 // Called when the game starts or when spawned
