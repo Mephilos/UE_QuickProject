@@ -25,7 +25,6 @@ AMyCharacter::AMyCharacter()
 	DodgeBackwardAction = nullptr;
 	DodgeRightAction = nullptr;
 	DodgeLeftAction = nullptr;
-	DefaultFriction = 0.0f;
 	FireAction = nullptr;
 
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
@@ -211,7 +210,7 @@ void AMyCharacter::PerformDodge(const FVector& Direction)
 	LaunchCharacter(DodgeDirection * DodgeDistance, true, false);
 }
 
-void AMyCharacter::DodgeForward()
+void AMyCharacter::DodgeForward_Implementation()
 {
 	if (GetWorld()->GetTimeSeconds() - LastForwardTapTime <= DodgeTapTime)
 	{
@@ -224,7 +223,7 @@ void AMyCharacter::DodgeForward()
 	}
 }
 
-void AMyCharacter::DodgeBackward()
+void AMyCharacter::DodgeBackward_Implementation()
 {
 	if (GetWorld()->GetTimeSeconds() - LastBackwardTapTime <= DodgeTapTime)
 	{
@@ -237,7 +236,7 @@ void AMyCharacter::DodgeBackward()
 	}
 }
 
-void AMyCharacter::DodgeRight()
+void AMyCharacter::DodgeRight_Implementation()
 {
 	if (GetWorld()->GetTimeSeconds() - LastRightTapTime <= DodgeTapTime)
 	{
@@ -250,7 +249,7 @@ void AMyCharacter::DodgeRight()
 	}
 }
 
-void AMyCharacter::DodgeLeft()
+void AMyCharacter::DodgeLeft_Implementation()
 {
 	if (GetWorld()->GetTimeSeconds() - LastLeftTapTime <= DodgeTapTime)
 	{
@@ -262,14 +261,18 @@ void AMyCharacter::DodgeLeft()
 		LastLeftTapTime = GetWorld()->GetTimeSeconds();
 	}
 }
+
+// 슬라이딩 리플레케이트를 위한 복제
 void AMyCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AMyCharacter, bSliding);
+	DOREPLIFETIME(AMyCharacter, CurrentDashCharges);
+	DOREPLIFETIME(AMyCharacter, CurrentHealth);
 }
 
-void AMyCharacter::Rep_bSliding()
+void AMyCharacter::OnRep_bSliding()
 {
 	if (bSliding)
 	{
@@ -290,9 +293,10 @@ void AMyCharacter::StartSlide_Implementation()
 		// 서버는 슬라이딩 판별 변수만 수정
 		bSliding = true;
 		// 서버도 Rep_bSliding 함수를 수동호출해 즉시 적용
-		Rep_bSliding();
+		OnRep_bSliding();
 		// 슬라이딩 시작 시점 속도 저장
 		SlideInitialSpeed = GetVelocity().Size2D();
+		SlideDirection = GetVelocity().GetSafeNormal();
 
 		// 마찰력 제동력 비활성화
 		GetCharacterMovement()->GroundFriction = 0.f;
@@ -331,7 +335,7 @@ void AMyCharacter::StopSlide_Implementation()
 {
 	bSliding = false;
 
-	Rep_bSliding();
+	OnRep_bSliding();
 	// 슬라이딩 끝나고 수치 복구
 	GetCharacterMovement()->GroundFriction = 10.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 8000.f;
@@ -358,8 +362,14 @@ void AMyCharacter::UpdateSlide(float Value)
 	{
 		// 커브 비율로 계산 (1.0 ~ 0.1로 설정했음)
 		float NewSpeed = SlideInitialSpeed * Value;
-		FVector Direction = GetLastMovementInputVector().IsNearlyZero() ? GetActorForwardVector() : GetLastMovementInputVector();
-		GetCharacterMovement()->Velocity = Direction * NewSpeed;
+		if (GEngine)
+		{
+			// 서버 화면 왼쪽 위에 NewSpeed와 SlideDirection 값을 초록색으로 표시합니다.
+			FString DebugMsg = FString::Printf(TEXT("SERVER SLIDE - Speed: %.2f, Direction: %s"), NewSpeed, *SlideDirection.ToString());
+			GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Green, DebugMsg);
+		}
+		//FVector Direction = GetCharacterMovement()->GetLastUpdateVelocity().GetSafeNormal();
+		GetCharacterMovement()->Velocity = SlideDirection * NewSpeed;
 	}
 
 	// FOV를 속도 비율에 따라서 조절 하도록
@@ -434,6 +444,14 @@ void AMyCharacter::ResetFireCooldown()
 	bCanFire = true;
 }
 
+void AMyCharacter::Server_WallJump_Implementation(const FVector& LaunchVelocity)
+{
+	// 벽 점프 실행
+	LaunchCharacter(LaunchVelocity, true, false);
+	// 벽 점프후 더블 점프(스택이 있다는 하에) 점프 횟수 초기화 
+	JumpCurrentCount = JumpMaxCount - 1;
+}
+
 void AMyCharacter::Jump()
 {
 	// 케릭터 컴포넌트 가져오기
@@ -454,15 +472,12 @@ void AMyCharacter::Jump()
 			// 캐릭터 위치에서 옆으로 100 유닛까지 라인을 그려서 벽과 충돌 확인
 			if (GetWorld()->LineTraceSingleByChannel(HitResult, Start, Start + Direction * 100.f, ECC_Visibility))
 			{
-				// 벽 점프 실행
+				// 벽 점프 계산
 				FVector WallNormal = HitResult.Normal;
 				FVector LaunchVelocity = WallNormal * WallJumpHorizontalForce + FVector::UpVector * WallJumpUpwardForce;
 
-				LaunchCharacter(LaunchVelocity, true, false);
-
-				// 벽 점프후 더블 점프(스택이 있다는 하에) 점프 횟수 초기화
-				JumpCurrentCount = JumpMaxCount - 1;
-
+				// 서버에 벽 점프 실행 요청
+				Server_WallJump(LaunchVelocity);
 				
 				UE_LOG(LogTemp, Warning, TEXT("Wall with Normal: %s"), *WallNormal.ToString());
 				

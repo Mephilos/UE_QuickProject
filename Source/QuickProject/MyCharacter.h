@@ -29,24 +29,23 @@ protected:
 	void DashRecharge();
 
 	// 닷지 함수
-	void DodgeForward();
-	void DodgeBackward();
-	void DodgeRight();
-	void DodgeLeft();
 	void PerformDodge(const FVector& Direction);
-
+	UFUNCTION(Server, Reliable)
+	void DodgeForward();
+	UFUNCTION(Server, Reliable)
+	void DodgeBackward();
+	UFUNCTION(Server, Reliable)
+	void DodgeRight();
+	UFUNCTION(Server, Reliable)
+	void DodgeLeft();
 
 	// 슬라이딩 함수
 	UFUNCTION()
-	void Rep_bSliding();
-
+	void OnRep_bSliding();
 	UFUNCTION(Server, Reliable)
 	void StartSlide();
-
 	UFUNCTION(Server, Reliable)
 	void StopSlide();
-
-
 	UFUNCTION()
 	void UpdateSlide(float Value);
 
@@ -56,15 +55,17 @@ protected:
 
 	// 무기 관련 함수
 	void Fire();
-
 	UFUNCTION(Server, Reliable)
 	void Server_Fire(const FVector& TraceStart, const FVector& TraceEnd);
-
 	void ResetFireCooldown();
 
 	// 바이탈 관련 함수
 	void Die();
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
+
+	UFUNCTION(Server, Reliable)
+	void Server_WallJump(const FVector& LaunchVelocity);
+	virtual void Jump() override;
 
 	// Replicated를 위한 변수 복제 함수 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -118,19 +119,18 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Movement-Slide")
 	float MinSlideSpeed = 100.0f; // 슬라이딩 발동 가능 속도
 
-	UPROPERTY(EditAnywhere, Category = "Movement-Slide")
-	float SlideFriction = 0.1f;
+	//UPROPERTY(EditAnywhere, Category = "Movement-Slide")
+	//float SlideFriction = 0.1f;
 
 	UPROPERTY(EditAnywhere, Category = "Movement-Slide")
 	UCurveFloat* SlideSpeedCurve;
 	
-	UPROPERTY(Replicated, ReplicatedUsing = Rep_bSliding)
-	bool bSliding = false;
+	UPROPERTY(Replicated, ReplicatedUsing = OnRep_bSliding)
+	bool bSliding;
 
 	FTimeline SlideTimeline;
-	FTimerHandle SlideTimerHandle;
 	float SlideInitialSpeed; // 슬라이딩 시점 속도를 저장하는 변수
-	float DefaultFriction; // 기존 마찰력 보존 하기 위한 변수
+	FVector SlideDirection;
 
 	// 벽점프
 	UPROPERTY(EditAnywhere, Category = "Movement-WallJump")
@@ -147,7 +147,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement-Dash")
 	int32 MaxDashCharges = 3;
 
-	UPROPERTY(EditAnywhere, Category = "Movement-Dash")
+	UPROPERTY(EditAnywhere, Replicated, Category = "Movement-Dash")
 	int32 CurrentDashCharges; // 대쉬 스택
 
 	FTimerHandle DashRechargeCooldownHandle;
@@ -166,7 +166,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health") 
 	float MaxHealth = 100.0f; // 체력
 
-	UPROPERTY(BlueprintReadOnly, Category = "Health")
+	UPROPERTY(BlueprintReadOnly,Replicated , Category = "Health")
 	float CurrentHealth;
 
 	// 마지막으로 나를 공격한 컨트롤러(스코어 판정위해)
@@ -176,6 +176,6 @@ protected:
 public:
 
 	virtual void Tick(float DeltaTime) override;
-	virtual void Jump() override;
+	
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 };
