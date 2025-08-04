@@ -373,7 +373,7 @@ void AMyCharacter::UpdateSlide(float Value)
 		float NewSpeed = SlideInitialSpeed * Value;
 		if (GEngine)
 		{
-			// 서버 화면 왼쪽 위에 NewSpeed와 SlideDirection 값을 초록색으로 표시
+			// 디버그: 슬라이딩
 			FString DebugMsg = FString::Printf(TEXT("SERVER SLIDE Speed: %.2f, Direction: %s"), NewSpeed, *SlideDirection.ToString());
 			GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Green, DebugMsg);
 		}

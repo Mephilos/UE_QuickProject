@@ -109,3 +109,17 @@ void ADeathmatchGameMode::OnMatchEnd()
 	}
 	// UE_LOG(LogTemp, Warning, TEXT("Match Done"));
 }
+
+void ADeathmatchGameMode::PostLogin(APlayerController* NewPlayer)
+{
+	Super::PostLogin(NewPlayer);
+
+	if (GetNumPlayers() >= 2)
+	{
+		if (!MatchTimerHandle.IsValid() || !GetWorld()->GetTimerManager().IsTimerActive(MatchTimerHandle))
+		{
+			GetWorld()->GetTimerManager().SetTimer(MatchTimerHandle, this, &ADeathmatchGameMode::OnMatchEnd, MatchTime, false);
+			UE_LOG(LogTemp, Warning, TEXT("Match Start. Player: %d"), GetNumPlayers());
+		}
+	}
+}

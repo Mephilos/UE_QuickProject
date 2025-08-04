@@ -28,11 +28,10 @@ protected:
 	virtual void BeginPlay() override;
 
 public:
-	
-
 	// 플레이어 죽음 함수
 	void PlayerDead(ACharacter* DeadCharacter, AController* DeadPlayerController, AController* KillerController, bool bHeadshot);
 	
 	// 더미 리스폰 함수
 	void RespawnDummy();
+	virtual void PostLogin(APlayerController* NewPlayer) override;
 };
